@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User is Super Admin if document exists or has admin email domain
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*@westmun[.]com$') && request.auth.token.email_verified == true)
+      );
+    }
+
+    // User is an active door staff member or admin
+    function isStaff() {
+      return isSignedIn() && (
+        isAdmin() ||
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+      );
+    }
+
+    // Validates a guest entity structure
+    function isValidGuest(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.ticketId is string && data.ticketId.size() >= 3 && data.ticketId.size() <= 64 &&
+             data.category is string && (data.category in ['VIP', 'General Admission', 'Backstage', 'Artist', 'Press', 'Staff']) &&
+             data.status is string && (data.status in ['Pending', 'Checked-In']);
+    }
+
+    // 1. Guests Manifest
+    match /guests/{guestId} {
+      // Scanners and admins can read guest records
+      allow get, list: if isStaff() && isValidId(guestId);
+
+      // Only administrators can create or delete guest records
+      allow create: if isAdmin() && isValidId(guestId) && isValidGuest(incoming());
+      allow delete: if isAdmin() && isValidId(guestId);
+
+      // Door staff can perform check-in updates (status change from Pending -> Checked-In)
+      allow update: if isStaff() && isValidId(guestId) && isValidGuest(incoming()) && (
+        isAdmin() ||
+        (
+          // Door check-in action: Can only mutate status and check-in metadata
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'checkedInTime', 'checkedInBy', 'checkedInGate']) &&
+          incoming().ticketId == existing().ticketId &&
+          incoming().name == existing().name
+        )
+      );
+    }
+
+    // 2. Staff Roles & Registry
+    match /staff/{staffId} {
+      allow get: if isStaff() && isValidId(staffId);
+      allow list: if isAdmin();
+      allow write: if isAdmin() && isValidId(staffId);
+    }
+
+    // 3. Scan & Audit Logs
+    match /logs/{logId} {
+      allow get, list: if isStaff() && isValidId(logId);
+      allow create: if isStaff() && isValidId(logId) &&
+                    incoming().ticketId is string &&
+                    incoming().guestName is string &&
+                    incoming().type in ['CHECK_IN', 'UNDO_CHECK_IN', 'DENIED_ATTEMPT'];
+      allow update, delete: if isAdmin() && isValidId(logId);
+    }
+
+    // 4. Venue Settings
+    match /settings/{settingId} {
+      allow get: if isStaff() && isValidId(settingId);
+      allow write: if isAdmin() && isValidId(settingId);
+    }
+  }
+}

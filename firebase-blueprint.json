@@ -1,0 +1,185 @@
+{
+  "entities": {
+    "Guest": {
+      "title": "Guest",
+      "description": "An attendee or ticket holder registered for access to West Mun Venue.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the attendee",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "ticketId": {
+          "type": "string",
+          "description": "Unique QR code payload / barcode identifier",
+          "minLength": 4,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Ticket admission tier",
+          "enum": ["VIP", "General Admission", "Backstage", "Artist", "Press", "Staff"]
+        },
+        "tableOrSeat": {
+          "type": "string",
+          "description": "Reserved booth, table, or seating section",
+          "maxLength": 50
+        },
+        "notes": {
+          "type": "string",
+          "description": "Access notes or special instructions",
+          "maxLength": 200
+        },
+        "status": {
+          "type": "string",
+          "description": "Check-in state",
+          "enum": ["Pending", "Checked-In"]
+        },
+        "checkedInTime": {
+          "type": "string",
+          "description": "ISO timestamp of check-in",
+          "format": "date-time"
+        },
+        "checkedInBy": {
+          "type": "string",
+          "description": "Name or identifier of the scanner staff member",
+          "maxLength": 100
+        },
+        "checkedInGate": {
+          "type": "string",
+          "description": "Gate or entrance lane where check-in occurred",
+          "maxLength": 100
+        }
+      },
+      "required": ["name", "ticketId", "category", "status"]
+    },
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "Authorized door personnel, supervisors, or administrators.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Staff member full name",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Staff email address",
+          "format": "email"
+        },
+        "password": {
+          "type": "string",
+          "description": "Account password for door portal access",
+          "minLength": 6,
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Department access role",
+          "enum": [
+            "volunteers",
+            "security",
+            "media_and_press",
+            "marketing",
+            "hr",
+            "ceremony_director",
+            "pr",
+            "secretary",
+            "doc_department",
+            "super_admin"
+          ]
+        },
+        "accessKey": {
+          "type": "string",
+          "description": "PIN code or access token for door terminal login",
+          "maxLength": 32
+        },
+        "assignedGate": {
+          "type": "string",
+          "description": "Default gate assignment",
+          "maxLength": 100
+        },
+        "canScan": {
+          "type": "boolean",
+          "description": "Whether user is authorized to perform QR scans"
+        },
+        "canManualCheckIn": {
+          "type": "boolean",
+          "description": "Whether user can manually override or type ticket IDs"
+        },
+        "canRevokeCheckIn": {
+          "type": "boolean",
+          "description": "Whether user can undo a check-in"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Active status of the staff member"
+        }
+      },
+      "required": ["name", "email", "role", "accessKey", "assignedGate", "canScan", "isActive"]
+    },
+    "CheckInLog": {
+      "title": "CheckInLog",
+      "description": "Audit record of scan actions and door attempts.",
+      "type": "object",
+      "properties": {
+        "ticketId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "guestName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "category": {
+          "type": "string"
+        },
+        "gate": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "scannerName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["CHECK_IN", "UNDO_CHECK_IN", "DENIED_ATTEMPT"]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 250
+        }
+      },
+      "required": ["ticketId", "guestName", "gate", "scannerName", "timestamp", "type"]
+    }
+  },
+  "firestore": {
+    "/guests/{guestId}": {
+      "schema": {
+        "$ref": "#/entities/Guest"
+      },
+      "description": "Master guest list and ticket status for West Mun"
+    },
+    "/staff/{staffId}": {
+      "schema": {
+        "$ref": "#/entities/StaffMember"
+      },
+      "description": "Authorized staff credentials and permission assignments for all 10 departments"
+    },
+    "/logs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/CheckInLog"
+      },
+      "description": "Live audit logs of door scans and check-in activities"
+    }
+  }
+}

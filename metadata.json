@@ -1,0 +1,6 @@
+{
+  "name": "West Mun Venue Manager",
+  "description": "Mobile-first event access control and QR ticket scanner for West Mun with live capacity tracking, role-based access, and instant check-in validation.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
