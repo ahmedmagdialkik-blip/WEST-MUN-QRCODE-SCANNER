@@ -1,28 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { useVenue } from '../../context/VenueContext';
-import { ROLE_LABELS, isScannerOrAdminRole } from '../../types/venue';
+import { ROLE_LABELS } from '../../types/venue';
 import {
   Shield,
   ShieldCheck,
   ShieldAlert,
-  Crown,
+  Building2,
   Clock,
   Sparkles,
   MapPin,
   CheckCircle2,
-  AlertCircle,
   Copy,
   Check,
   LogOut,
-  UserCheck,
   Zap,
   Lock,
   RefreshCw,
-  QrCode as QrIcon,
-  Radio,
+  LogIn,
 } from 'lucide-react';
-import { playClickSound, playSuccessChime, playSecurityAlertSiren } from '../../utils/audio';
+import { playClickSound } from '../../utils/audio';
 
 export const StaffPassScreen: React.FC = () => {
   const {
@@ -44,7 +41,7 @@ export const StaffPassScreen: React.FC = () => {
   // The staff ticket code to be encoded in the QR code
   const staffTicketCode =
     currentUser?.ticketId ||
-    `WM-STAFF-${currentUser?.role.toUpperCase()}-${currentUser?.accessKey || '0000'}`;
+    `MUN-STAFF-${currentUser?.role.toUpperCase()}-${currentUser?.accessKey || '0000'}`;
 
   // Find if this staff ticket is already registered / scanned in the venue manifest
   const guestRecord = guests.find(
@@ -52,7 +49,7 @@ export const StaffPassScreen: React.FC = () => {
   );
 
   const isCheckedIn = guestRecord?.status === 'Checked-In';
-  const scanCount = guestRecord?.scanCount || 0;
+  const hasLeft = guestRecord?.status === 'Left';
 
   // Update real-time clock every second for dynamic anti-counterfeiting
   useEffect(() => {
@@ -102,20 +99,28 @@ export const StaffPassScreen: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Simulate an on-duty Security officer scanning this pass at the gate
-  const handleSimulateSecurityScan = () => {
+  // Simulate Security scanning this pass at Entrance (Entry Mode)
+  const handleSimulateEntryScan = () => {
     playClickSound();
     setSimulating(true);
-
-    // Call processScan with this staff code
     setTimeout(() => {
-      processScan(staffTicketCode);
+      processScan(staffTicketCode, 'entry');
       setSimulating(false);
-    }, 400);
+    }, 300);
   };
 
-  // Find security staff member for quick switch demonstration
+  // Simulate Security scanning this pass at Exit (Exit Mode / Leave)
+  const handleSimulateExitScan = () => {
+    playClickSound();
+    setSimulating(true);
+    setTimeout(() => {
+      processScan(staffTicketCode, 'exit');
+      setSimulating(false);
+    }, 300);
+  };
+
   const securityStaff = staffMembers.find((s) => s.role === 'security');
+  const itStaff = staffMembers.find((s) => s.role === 'it');
   const adminStaff = staffMembers.find((s) => s.role === 'super_admin');
 
   return (
@@ -126,8 +131,8 @@ export const StaffPassScreen: React.FC = () => {
         <div className="text-left text-xs leading-relaxed">
           <span className="font-bold text-amber-300 block">Personal Credential Mode</span>
           <span className="text-neutral-300 text-[11px]">
-            Your account ({roleMeta?.title}) is assigned a Staff QR Pass. Door scanning & venue administration are restricted to{' '}
-            <strong className="text-amber-300 font-semibold">Security & Admins</strong>.
+            Your account ({roleMeta?.title}) displays your verified QR Pass for MUN Venue access. Camera scanner tools are strictly reserved for{' '}
+            <strong className="text-amber-300 font-semibold">Security & IT</strong>.
           </span>
         </div>
       </div>
@@ -141,9 +146,9 @@ export const StaffPassScreen: React.FC = () => {
         {/* Dynamic Holographic Watermark Bar */}
         <div className="flex items-center justify-between pb-3 border-b border-amber-500/25 mb-4">
           <div className="flex items-center gap-1.5">
-            <Crown className="w-4 h-4 text-amber-400" />
+            <Building2 className="w-4 h-4 text-amber-400" />
             <span className="text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 uppercase">
-              WEST MUN
+              MUN VENUE
             </span>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-950 border border-amber-500/30">
@@ -184,7 +189,7 @@ export const StaffPassScreen: React.FC = () => {
 
           <p className="text-[11px] text-neutral-400 flex items-center gap-1 mt-1 font-medium">
             <MapPin className="w-3 h-3 text-amber-400" />
-            <span>{currentUser?.assignedGate || 'West Mun General Grounds'}</span>
+            <span>MUN Venue</span>
           </p>
         </div>
 
@@ -193,7 +198,7 @@ export const StaffPassScreen: React.FC = () => {
           {qrDataUrl ? (
             <img
               src={qrDataUrl}
-              alt="Official Staff Access QR Code"
+              alt="Official MUN Venue Access QR Code"
               className="w-full h-full object-contain"
             />
           ) : (
@@ -211,7 +216,7 @@ export const StaffPassScreen: React.FC = () => {
           </span>
           <button
             onClick={copyCode}
-            className="p-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-amber-500/30 text-amber-400 hover:text-white transition cursor-pointer"
+            className="p-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-amber-500/30 text-amber-400 hover:text-white transition cursor-pointer"
             title="Copy QR Code value"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -225,10 +230,10 @@ export const StaffPassScreen: React.FC = () => {
               <div className="flex items-center gap-2 mb-1">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                  Admitted • Verified Access
+                  Admitted • Inside MUN Venue
                 </span>
                 <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Scan #1
+                  Active
                 </span>
               </div>
               <p className="text-[11px] text-neutral-300 pl-6">
@@ -239,97 +244,155 @@ export const StaffPassScreen: React.FC = () => {
                         hour: '2-digit',
                         minute: '2-digit',
                       })
-                    : 'Gate'}
+                    : 'Entrance'}
                 </strong>{' '}
-                by <span className="text-amber-300">{guestRecord.checkedInBy || 'Security Officer'}</span>
+                by <span className="text-amber-300">{guestRecord.checkedInBy || 'Security'}</span>
               </p>
-              <p className="text-[10px] text-neutral-400 pl-6 mt-1 flex items-center gap-1 font-mono">
+              <p className="text-[10px] text-amber-300 pl-6 mt-1 flex items-center gap-1 font-mono">
                 <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>Anti-Passback active: Re-scanning this QR is locked out.</span>
+                <span>Locked: Re-scanning blocked while inside. (Unlock by scanning out).</span>
+              </p>
+            </div>
+          ) : hasLeft ? (
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-950/50 to-neutral-950 border border-amber-500/50 text-left">
+              <div className="flex items-center gap-2 mb-1">
+                <LogOut className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  Departed • Outside Venue
+                </span>
+                <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Eligible Re-Scan
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-300 pl-6">
+                You have left MUN Venue. Your QR code is cleared to re-scan for re-entry upon return.
               </p>
             </div>
           ) : (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-950/40 via-neutral-950 to-neutral-900 border border-amber-500/40 text-left">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 border border-neutral-700 text-left">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
                 <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-                  Awaiting Gate Admission
+                  Awaiting Entrance Scan
                 </span>
               </div>
               <p className="text-[11px] text-neutral-300 pl-4 leading-snug">
-                Present this screen to <strong className="text-amber-200">Security</strong> or <strong className="text-amber-200">Admins</strong> at the venue entrance.
+                Present this screen to <strong className="text-amber-200">Security</strong> at the MUN Venue entrance.
               </p>
             </div>
           )}
         </div>
 
-        {/* Anti-Passback & Verification Notice */}
-        <div className="mt-3 text-[10px] text-neutral-500 flex items-center justify-center gap-1">
+        {/* Verification Policy Notice */}
+        <div className="mt-3 text-[10px] text-neutral-400 flex items-center justify-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-amber-400/70" />
-          <span>One-Time Scannable Official Event Credential</span>
+          <span>MUN Venue Single-Scan Policy (Unlocked upon Departure)</span>
         </div>
       </div>
 
-      {/* Interactive Testing & Role Switching Helper */}
+      {/* Interactive Testing & Re-Scan Simulation Controls */}
       <div className="w-full max-w-sm mt-5 space-y-2.5">
         <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider text-center flex items-center justify-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Test & Scanner Access Options</span>
+          <span>Test Entry / Exit Lifecycle</span>
         </div>
 
-        {/* 1. Simulate Security scanning this pass */}
-        <button
-          onClick={handleSimulateSecurityScan}
-          disabled={simulating}
-          className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95"
-        >
-          <Zap className="w-4 h-4 text-amber-400" />
-          <span>
-            {isCheckedIn
-              ? 'Test Re-Scan Lockout (Triggers Anti-Passback Alert)'
-              : 'Simulate Security Officer Scanning My Pass'}
-          </span>
-        </button>
+        {/* Flow button based on state */}
+        {!isCheckedIn ? (
+          <button
+            onClick={handleSimulateEntryScan}
+            disabled={simulating}
+            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>
+              {hasLeft
+                ? 'Simulate Security Scanning My Re-Entry Pass'
+                : 'Simulate Security Scanning My Pass (Enter Venue)'}
+            </span>
+          </button>
+        ) : (
+          <div className="space-y-2">
+            {/* Try scanning again while already inside -> triggers anti-passback */}
+            <button
+              onClick={handleSimulateEntryScan}
+              disabled={simulating}
+              className="w-full py-2 px-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-500/50 text-red-200 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-95"
+            >
+              <Zap className="w-4 h-4 text-red-400" />
+              <span>Test Re-Scan While Inside (Triggers Re-Scan Block Alert)</span>
+            </button>
 
-        {/* 2. Switch to Security to test actual camera scanning */}
+            {/* Step out / leave venue */}
+            <button
+              onClick={handleSimulateExitScan}
+              disabled={simulating}
+              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-neutral-950 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95"
+            >
+              <LogOut className="w-4 h-4 text-neutral-950" />
+              <span>Simulate Security Scanning Exit (I Am Leaving Venue)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Switch to Security */}
         {securityStaff && (
           <button
             onClick={() => {
               playClickSound();
               switchAccountFast(securityStaff.id);
             }}
-            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>Switch to Security ({securityStaff.name})</span>
             </div>
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-              Has Scanner
+              Camera Scanner
             </span>
           </button>
         )}
 
-        {/* 3. Switch to Admin */}
+        {/* Switch to IT */}
+        {itStaff && (
+          <button
+            onClick={() => {
+              playClickSound();
+              switchAccountFast(itStaff.id);
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Switch to IT ({itStaff.name})</span>
+            </div>
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
+              Camera Scanner
+            </span>
+          </button>
+        )}
+
+        {/* Switch to Admin */}
         {adminStaff && (
           <button
             onClick={() => {
               playClickSound();
               switchAccountFast(adminStaff.id);
             }}
-            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span>Switch to Admin ({adminStaff.name})</span>
+              <Building2 className="w-4 h-4 text-amber-400" />
+              <span>Switch to Super Admin ({adminStaff.name})</span>
             </div>
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-              Full Access
+              Full Admin
             </span>
           </button>
         )}
 
-        {/* 4. Log out */}
+        {/* Sign Out */}
         <button
           onClick={() => {
             playClickSound();
@@ -338,7 +401,7 @@ export const StaffPassScreen: React.FC = () => {
           className="w-full py-2 px-3 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 text-red-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out / Change Password</span>
+          <span>Sign Out / Change Account</span>
         </button>
       </div>
     </div>

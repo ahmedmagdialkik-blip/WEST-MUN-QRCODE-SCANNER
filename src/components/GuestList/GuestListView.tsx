@@ -26,6 +26,7 @@ export const GuestListView: React.FC = () => {
   const {
     guests,
     manualCheckIn,
+    markGuestLeft,
     undoCheckIn,
     removeGuest,
     importGuests,
@@ -34,7 +35,7 @@ export const GuestListView: React.FC = () => {
   } = useVenue();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Checked-In' | 'VIP'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Checked-In' | 'Left' | 'VIP'>('All');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeBadgeGuest, setActiveBadgeGuest] = useState<Guest | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -45,7 +46,7 @@ export const GuestListView: React.FC = () => {
   const isSecretaryOrAdmin =
     currentUser?.role === 'super_admin' ||
     currentUser?.role === 'secretary' ||
-    currentUser?.role === 'ceremony_director' ||
+    currentUser?.role === 'it' ||
     currentUser?.role === 'pr';
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
@@ -60,6 +61,7 @@ export const GuestListView: React.FC = () => {
 
     if (statusFilter === 'Pending') return g.status === 'Pending';
     if (statusFilter === 'Checked-In') return g.status === 'Checked-In';
+    if (statusFilter === 'Left') return g.status === 'Left';
     if (statusFilter === 'VIP') return g.category === 'VIP';
     return true;
   });
@@ -95,7 +97,7 @@ export const GuestListView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `WestMun_Gold_Manifest_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `MUN_Venue_Manifest_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -108,7 +110,7 @@ export const GuestListView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'WestMun_Sample_Gold_Template.csv');
+    link.setAttribute('download', 'MUN_Venue_Sample_Template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -157,14 +159,19 @@ export const GuestListView: React.FC = () => {
           <div className="flex items-center gap-1.5 mb-0.5">
             <Crown className="w-4 h-4 text-amber-400" />
             <h1 className="text-xl font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-              West Mun Guest Manifest
+              MUN Venue Guest Manifest
             </h1>
           </div>
           <p className="text-xs text-neutral-400">
             {guests.length} total attendees •{' '}
             <span className="text-amber-300 font-bold">
-              {guests.filter((g) => g.status === 'Checked-In').length} checked in
+              {guests.filter((g) => g.status === 'Checked-In').length} currently inside
             </span>
+            {guests.filter((g) => g.status === 'Left').length > 0 && (
+              <span className="text-amber-400/80 ml-2">
+                ({guests.filter((g) => g.status === 'Left').length} left venue)
+              </span>
+            )}
           </p>
         </div>
 
@@ -266,7 +273,7 @@ export const GuestListView: React.FC = () => {
 
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
           <span className="text-[10px] text-amber-400/80 uppercase font-bold">Filter:</span>
-          {(['All', 'Pending', 'Checked-In', 'VIP'] as const).map((filter) => (
+          {(['All', 'Checked-In', 'Left', 'Pending', 'VIP'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => {
@@ -300,13 +307,16 @@ export const GuestListView: React.FC = () => {
         ) : (
           filteredGuests.map((guest) => {
             const isChecked = guest.status === 'Checked-In';
+            const isLeft = guest.status === 'Left';
 
             return (
               <div
                 key={guest.id}
                 className={`p-3.5 rounded-2xl border transition-all ${
                   isChecked
-                    ? 'bg-neutral-950/70 border-neutral-800'
+                    ? 'bg-neutral-950/70 border-emerald-500/30'
+                    : isLeft
+                    ? 'bg-neutral-950/70 border-amber-500/30'
                     : 'bg-gradient-to-b from-neutral-950 to-black border-amber-500/25 hover:border-amber-400/50'
                 }`}
               >
@@ -314,6 +324,12 @@ export const GuestListView: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-black text-white truncate">{guest.name}</span>
+
+                      {guest.role && (
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50">
+                          {guest.role}
+                        </span>
+                      )}
 
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
@@ -330,14 +346,18 @@ export const GuestListView: React.FC = () => {
                       <span
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                           isChecked
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : isLeft
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                             : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
                         }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${isChecked ? 'bg-amber-400' : 'bg-neutral-500'}`}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isChecked ? 'bg-emerald-400' : isLeft ? 'bg-amber-400' : 'bg-neutral-500'
+                          }`}
                         ></span>
-                        {guest.status}
+                        {isChecked ? 'Inside Venue' : isLeft ? 'Left Venue (Cleared)' : 'Pending'}
                       </span>
                     </div>
 
@@ -360,7 +380,7 @@ export const GuestListView: React.FC = () => {
                                   minute: '2-digit',
                                 })
                               : 'earlier'}{' '}
-                            by <span className="text-amber-200">{guest.checkedInBy || 'Door Staff'}</span>
+                            by <span className="text-amber-200">{guest.checkedInBy || 'Security'}</span>
                           </span>
                         </p>
 
@@ -369,6 +389,24 @@ export const GuestListView: React.FC = () => {
                             <span>Blocked Re-scans: {guest.scanCount - 1}</span>
                           </span>
                         )}
+                      </div>
+                    )}
+
+                    {isLeft && (
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        <p className="text-[11px] text-amber-300/80 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>
+                            Left at{' '}
+                            {guest.lastExitedTime
+                              ? new Date(guest.lastExitedTime).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : 'earlier'}{' '}
+                            • Unlocked for re-entry scan
+                          </span>
+                        </p>
                       </div>
                     )}
 
@@ -389,31 +427,49 @@ export const GuestListView: React.FC = () => {
                       <QrCode className="w-4 h-4" />
                     </button>
 
-                    {!isChecked ? (
+                    {/* STATUS ACTION BUTTONS */}
+                    {isChecked ? (
+                      <div className="flex items-center gap-1">
+                        {/* Mark Left action: unlocks them to re-scan when they return! */}
+                        <button
+                          onClick={() => {
+                            playClickSound();
+                            markGuestLeft(guest.id);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold transition cursor-pointer active:scale-95"
+                          title="Record Departure (Unlocks QR code for re-scan)"
+                        >
+                          Mark Left
+                        </button>
+
+                        {(isSuperAdmin || currentUser?.canRevokeCheckIn) && (
+                          <button
+                            onClick={() => {
+                              playClickSound();
+                              undoCheckIn(guest.id);
+                            }}
+                            className="p-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-amber-400 text-neutral-400 hover:text-amber-300 text-xs transition cursor-pointer active:scale-95"
+                            title="Reset to Pending"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
                       currentUser?.canManualCheckIn && (
                         <button
                           onClick={() => {
                             playClickSound();
                             manualCheckIn(guest.id);
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm shadow-amber-500/20"
+                          className={`px-3 py-1.5 rounded-xl text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm ${
+                            isLeft
+                              ? 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-neutral-950'
+                              : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400'
+                          }`}
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>Check-In</span>
-                        </button>
-                      )
-                    ) : (
-                      (isSuperAdmin || currentUser?.canRevokeCheckIn) && (
-                        <button
-                          onClick={() => {
-                            playClickSound();
-                            undoCheckIn(guest.id);
-                          }}
-                          className="px-2.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-amber-400 text-amber-300 text-xs font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
-                          title="Undo Check-In"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="hidden sm:inline">Undo</span>
+                          <span>{isLeft ? 'Re-Enter' : 'Check-In'}</span>
                         </button>
                       )
                     )}

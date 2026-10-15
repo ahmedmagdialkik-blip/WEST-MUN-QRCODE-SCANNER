@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { useVenue } from '../../context/VenueContext';
-import { X, Sparkles, QrCode, Zap, Crown } from 'lucide-react';
+import { X, Sparkles, QrCode, Zap, Building2, LogOut, LogIn } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
 
 interface TestTicketBadgesProps {
@@ -42,9 +42,9 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
       ? guests
       : guests.filter((g) => g.category.toLowerCase() === selectedCategory.toLowerCase());
 
-  const handleSimulate = (code: string) => {
+  const handleSimulate = (code: string, mode: 'entry' | 'exit' = 'entry') => {
     playClickSound();
-    processScan(code);
+    processScan(code, mode);
     setActiveTab('scanner');
     onClose();
   };
@@ -56,12 +56,12 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
         <div className="px-5 py-4 border-b border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Crown className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-amber-200">West Mun Official Passes & QR Codes</h2>
+              <h2 className="text-base font-bold text-amber-200">MUN Venue Official Passes & QR Codes</h2>
               <p className="text-xs text-neutral-400">
-                Point your phone camera at these badges or click Simulate Scan
+                Test the entrance check-in, duplicate re-scan block, and departure exit lifecycle
               </p>
             </div>
           </div>
@@ -102,6 +102,7 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
             {filteredGuests.map((guest) => {
               const qrUrl = qrCodeUrls[guest.ticketId];
               const isCheckedIn = guest.status === 'Checked-In';
+              const isLeft = guest.status === 'Left';
 
               return (
                 <div
@@ -124,12 +125,18 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                         isCheckedIn
-                          ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                          : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : isLeft
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-neutral-800 text-neutral-300 border border-neutral-700'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isCheckedIn ? 'bg-red-400' : 'bg-amber-400'}`}></span>
-                      {isCheckedIn ? 'Checked-In (Duplicate)' : 'Pending (Valid)'}
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isCheckedIn ? 'bg-emerald-400' : isLeft ? 'bg-amber-400' : 'bg-neutral-500'
+                        }`}
+                      ></span>
+                      {isCheckedIn ? 'Inside Venue' : isLeft ? 'Left (Cleared)' : 'Pending (Valid)'}
                     </span>
                   </div>
 
@@ -148,12 +155,17 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
 
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-white truncate">{guest.name}</p>
+                      {guest.role && (
+                        <p className="text-[10px] font-extrabold uppercase tracking-wide text-amber-300 mt-0.5">
+                          Role: {guest.role}
+                        </p>
+                      )}
                       <p className="text-xs font-mono text-amber-300 truncate mt-0.5 font-bold">
                         {guest.ticketId}
                       </p>
                       {guest.tableOrSeat && (
-                        <p className="text-[11px] text-neutral-400 mt-1 truncate">
-                          Seat: <span className="text-amber-200">{guest.tableOrSeat}</span>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                          Location: <span className="text-amber-200">{guest.tableOrSeat}</span>
                         </p>
                       )}
                       {guest.notes && (
@@ -164,21 +176,44 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-neutral-800 flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-neutral-400 font-mono">
-                      {isCheckedIn ? 'Triggers Duplicate' : 'Triggers Success'}
-                    </span>
-                    <button
-                      onClick={() => handleSimulate(guest.ticketId)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 ${
-                        isCheckedIn
-                          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30'
-                          : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 font-black shadow-md shadow-amber-500/20'
-                      }`}
-                    >
-                      <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span>Simulate Scan</span>
-                    </button>
+                  <div className="mt-3 pt-2.5 border-t border-neutral-800 flex items-center justify-between gap-1.5">
+                    {isCheckedIn ? (
+                      <>
+                        <button
+                          onClick={() => handleSimulate(guest.ticketId, 'entry')}
+                          className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 bg-red-950/60 hover:bg-red-900 border border-red-500/40 text-red-300 transition cursor-pointer active:scale-95"
+                          title="Try scanning again while inside (Blocked)"
+                        >
+                          <Zap className="w-3 h-3 text-red-400" />
+                          <span>Re-Scan (Block)</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleSimulate(guest.ticketId, 'exit')}
+                          className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 transition cursor-pointer active:scale-95"
+                          title="Log Departure (Unlocks re-scan)"
+                        >
+                          <LogOut className="w-3 h-3 text-amber-400" />
+                          <span>Scan Exit</span>
+                        </button>
+                      </>
+                    ) : isLeft ? (
+                      <button
+                        onClick={() => handleSimulate(guest.ticketId, 'entry')}
+                        className="w-full py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-neutral-950 font-black shadow-md shadow-emerald-500/20 transition cursor-pointer active:scale-95"
+                      >
+                        <LogIn className="w-3.5 h-3.5 fill-current" />
+                        <span>Simulate Re-Entry Scan</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSimulate(guest.ticketId, 'entry')}
+                        className="w-full py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 font-black shadow-md shadow-amber-500/20 transition cursor-pointer active:scale-95"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>Simulate Entry Scan</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -187,7 +222,7 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
         </div>
 
         <div className="px-5 py-3 bg-black border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400">
-          <span>West Mun Black & Gold Gala Manifest</span>
+          <span>MUN Venue Access Manifest</span>
           <button
             onClick={() => {
               playClickSound();

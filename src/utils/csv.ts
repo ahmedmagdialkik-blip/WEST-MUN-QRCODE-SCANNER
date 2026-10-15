@@ -154,11 +154,10 @@ export function exportGuestsToCSV(guests: Guest[]): string {
 export function generateSampleCSVTemplate(): string {
   return [
     'Guest Name,Ticket ID/QR Code Value,Category,Status [Pending/Checked-In],Checked-In Time,Checked-In By,Table/Seat,Notes',
-    'Alexander Wright,WM-VIP-8891,VIP,Pending,,,Table 14,Includes bottle service & backstage wristband',
-    'Elena Rostova,WM-GA-4412,General Admission,Pending,,,GA Floor,Standard admission',
-    'Marcus Vance,WM-ART-1002,Artist,Pending,,,Green Room,Lead performer entourage',
-    'Sophia Chen,WM-VIP-8892,VIP,Checked-In,"2026-10-14 20:45:12",Door 1 VIP,Table 14,Plus 1 included',
-    'Devon Miller,WM-GA-4413,General Admission,Pending,,,GA Floor,Online presale ticket',
-    'Clara Oswald,WM-PRS-3021,Press,Pending,,,Media Pit,Approved DSLR camera permit',
+    'General Assembly Delegate 1,MUN-GA-101,General Admission,Pending,,,Row A Seat 1,General Assembly Committee',
+    'Security Council Delegate,MUN-VIP-201,VIP,Pending,,,UNSC Chamber Desk 4,UNSC Diplomatic Pass',
+    'Diplomatic Keynote Speaker,MUN-ART-401,Artist,Pending,,,Main Stage Podium,Opening Ceremony Speaker',
+    'Layan Ahmed,MUN-STAFF-DESIGN-3301,Staff,Pending,,,Creative Studio,Lead Designer Official Pass',
+    'Crisis Committee Delegate,MUN-VIP-301,VIP,Pending,,,Crisis Room Desk 8,Crisis Delegate Pass',
   ].join('\r\n');
 }

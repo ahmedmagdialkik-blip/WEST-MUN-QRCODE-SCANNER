@@ -19,8 +19,9 @@ export const BottomNav: React.FC = () => {
 
   const isManagement =
     currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'hr' ||
-    currentUser?.role === 'ceremony_director';
+    currentUser?.role === 'it' ||
+    currentUser?.role === 'security' ||
+    currentUser?.role === 'hr';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-black/95 backdrop-blur-xl border-t border-amber-500/30 pb-safe pt-1 px-2 shadow-[0_-4px_30px_rgba(0,0,0,0.9)]">

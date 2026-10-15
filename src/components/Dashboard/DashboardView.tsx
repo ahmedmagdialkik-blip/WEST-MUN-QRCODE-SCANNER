@@ -21,7 +21,7 @@ export const DashboardView: React.FC = () => {
 
   const isManagement =
     currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'ceremony_director' ||
+    currentUser?.role === 'it' ||
     currentUser?.role === 'security';
 
   const categories = ['VIP', 'General Admission', 'Artist', 'Backstage', 'Press'] as const;
@@ -200,32 +200,40 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* Entrance Gate Traffic & Live Activity Stream */}
+      {/* MUN Venue Flow & Live Activity Stream */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Gate Traffic */}
+        {/* Attendance Summary */}
         <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-lg">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs uppercase font-black tracking-wider text-amber-200">
-              Scans By Entrance Gate
+              MUN Venue Attendance Summary
             </h3>
             <MapPin className="w-4 h-4 text-amber-400" />
           </div>
 
-          {Object.keys(gateCounts).length === 0 ? (
-            <p className="text-xs text-neutral-500 py-6 text-center">No door scans recorded yet</p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(gateCounts).map(([gate, count]) => (
-                <div
-                  key={gate}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-amber-500/20 text-xs"
-                >
-                  <span className="font-semibold text-neutral-200 truncate max-w-[200px]">{gate}</span>
-                  <span className="font-mono font-bold text-amber-300">{count} check-ins</span>
-                </div>
-              ))}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-emerald-500/30 text-xs">
+              <span className="font-semibold text-emerald-300">Currently Inside MUN Venue</span>
+              <span className="font-mono font-bold text-emerald-400">{stats.checkedInCount} attendees</span>
             </div>
-          )}
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-amber-500/30 text-xs">
+              <span className="font-semibold text-amber-300">Departed (Cleared for Re-Scan)</span>
+              <span className="font-mono font-bold text-amber-400">{stats.leftCount} attendees</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-red-500/30 text-xs">
+              <span className="font-semibold text-red-300">Blocked Re-Scan Attempts</span>
+              <span className="font-mono font-bold text-red-400">
+                {logs.filter((l) => l.type === 'DENIED_ATTEMPT').length} blocked
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
+              <span className="font-semibold text-neutral-300">Available Venue Capacity</span>
+              <span className="font-mono font-bold text-neutral-200">{stats.capacityRemaining} slots</span>
+            </div>
+          </div>
         </div>
 
         {/* Live Timeline Stream */}
@@ -247,16 +255,35 @@ export const DashboardView: React.FC = () => {
                   className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
                     log.type === 'CHECK_IN'
                       ? 'bg-neutral-900 border-amber-500/20'
+                      : log.type === 'RE_ENTRY'
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                      : log.type === 'CHECK_OUT'
+                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
                       : log.type === 'UNDO_CHECK_IN'
-                      ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
+                      ? 'bg-neutral-900 border-neutral-700 text-neutral-300'
                       : log.type === 'SECURITY_FLAG'
                       ? 'bg-red-950/60 border-2 border-red-500 text-white'
                       : 'bg-red-950/40 border border-red-500/50 text-red-200'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="font-bold text-white truncate">{log.guestName}</p>
+                      {log.type === 'CHECK_IN' && (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                          Entry
+                        </span>
+                      )}
+                      {log.type === 'RE_ENTRY' && (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/25 text-emerald-300">
+                          Re-Entry
+                        </span>
+                      )}
+                      {log.type === 'CHECK_OUT' && (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300">
+                          Departed
+                        </span>
+                      )}
                       {log.type === 'DENIED_ATTEMPT' && (
                         <span className="text-[9px] uppercase font-black px-1.5 py-0.2 rounded bg-red-600 text-white">
                           Re-Scan Blocked

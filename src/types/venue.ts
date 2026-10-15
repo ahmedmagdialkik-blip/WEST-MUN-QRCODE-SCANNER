@@ -1,4 +1,4 @@
-export type TicketStatus = 'Pending' | 'Checked-In';
+export type TicketStatus = 'Pending' | 'Checked-In' | 'Left';
 
 export type TicketCategory = 'VIP' | 'General Admission' | 'Backstage' | 'Artist' | 'Press' | 'Staff';
 
@@ -13,29 +13,37 @@ export interface Guest {
   name: string;
   ticketId: string; // The QR code payload / barcode value
   category: TicketCategory;
+  role?: string; // Specific designated role written for this person (e.g., 'Lead Designer', 'Security', 'IT Specialist')
   tableOrSeat?: string;
   notes?: string;
   status: TicketStatus;
   checkedInTime?: string | null;
   checkedInBy?: string | null;
   checkedInGate?: string | null;
-  scanCount: number; // 0 = never scanned, 1 = valid entry, 2+ = duplicate re-scan attempts
+  lastExitedTime?: string | null;
+  lastExitedBy?: string | null;
+  scanCount: number; // 0 = never scanned, 1+ = scans
   deniedAttempts?: ScanAttemptRecord[];
   email?: string;
   phone?: string;
 }
 
-// 10 distinct venue roles
+// Distinct venue roles for MUN Venue
 export type StaffRole =
   | 'super_admin'
-  | 'volunteers'
+  | 'executive'
   | 'security'
+  | 'it'
+  | 'designers'
   | 'media_and_press'
   | 'marketing'
   | 'hr'
-  | 'ceremony_director'
   | 'pr'
+  | 'volunteers'
+  | 'logistics'
   | 'secretary'
+  | 'ceremonies'
+  | 'dcc'
   | 'doc_department';
 
 export interface StaffMember {
@@ -58,15 +66,24 @@ export interface StaffMember {
 
 /**
  * Checks if the role has authorization to scan QR codes and access venue management.
- * Strictly restricted to Security and Admins (Super Admin and Ceremony Director).
+ * Strictly restricted to members of Security and IT (and master Super Admin).
  */
 export function isScannerOrAdminRole(role?: StaffRole | null): boolean {
   if (!role) return false;
-  return role === 'security' || role === 'super_admin' || role === 'ceremony_director';
+  return role === 'security' || role === 'it' || role === 'super_admin';
+}
+
+/**
+ * Checks if the user has the ability to add team members.
+ * Security can add to Security; IT can add to IT; Super Admin & HR can add to all.
+ */
+export function canAddTeamMembers(role?: StaffRole | null): boolean {
+  if (!role) return false;
+  return role === 'security' || role === 'it' || role === 'super_admin' || role === 'hr';
 }
 
 export interface ScanResult {
-  type: 'SUCCESS' | 'ALREADY_CHECKED_IN' | 'INVALID_TICKET' | 'REVOKED';
+  type: 'SUCCESS' | 'RE_ENTRY_SUCCESS' | 'ALREADY_CHECKED_IN' | 'EXIT_SUCCESS' | 'NOT_CHECKED_IN' | 'INVALID_TICKET' | 'REVOKED';
   guest?: Guest;
   scannedCode: string;
   timestamp: string;
@@ -89,7 +106,7 @@ export interface VenueSettings {
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   autoResetScanDelayMs: number;
-  strictAntiPassback: boolean; // Strictly locks out re-scanned QR codes
+  strictAntiPassback: boolean; // Strictly locks out re-scanned QR codes unless person has left
 }
 
 export interface CheckInLogEntry {
@@ -100,70 +117,100 @@ export interface CheckInLogEntry {
   gate: string;
   scannerName: string;
   timestamp: string;
-  type: 'CHECK_IN' | 'UNDO_CHECK_IN' | 'DENIED_ATTEMPT' | 'SECURITY_FLAG';
+  type: 'CHECK_IN' | 'RE_ENTRY' | 'CHECK_OUT' | 'UNDO_CHECK_IN' | 'DENIED_ATTEMPT' | 'SECURITY_FLAG';
   reason?: string;
   attemptCount?: number;
 }
 
 export const ROLE_LABELS: Record<StaffRole, { title: string; badge: string; description: string; canScan: boolean }> = {
   super_admin: {
-    title: 'Super Admin',
-    badge: 'Executive Admin',
-    description: 'Full master venue authority. High-speed camera scanner & door control.',
+    title: 'Secretary General',
+    badge: 'Secretary General',
+    description: 'Executive Board leader. Full venue oversight, access management, and camera scanning authorization.',
     canScan: true,
   },
-  ceremony_director: {
-    title: 'Ceremony Director',
-    badge: 'Director Admin',
-    description: 'Executive stage & door protocol. High-speed camera scanner access.',
-    canScan: true,
+  executive: {
+    title: 'Executive Board & Leadership',
+    badge: 'Executive Pass',
+    description: 'Deputy Secretary General, Under Secretary General, and Senior Advisors. Verified Executive Pass.',
+    canScan: false,
   },
   security: {
     title: 'Security',
-    badge: 'Door Enforcement',
-    description: 'Active camera scanner, duplicate scan enforcement, and perimeter policing.',
+    badge: 'Security Scanner & Door Access',
+    description: 'Active camera scanner, door check-in/out enforcement, and ability to add members to the Security team.',
     canScan: true,
   },
-  volunteers: {
-    title: 'Volunteers',
-    badge: 'Staff Pass',
-    description: 'Personal Staff QR Pass screen. Verified at gate entrance by Security.',
+  it: {
+    title: 'IT & Technical',
+    badge: 'IT Scanner & Tech Lead',
+    description: 'Active camera scanner, system technical controls, and ability to add members to the IT team.',
+    canScan: true,
+  },
+  designers: {
+    title: 'Design',
+    badge: 'Design Team Pass',
+    description: 'Head of Design, Co-Heads, and Designers. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
   media_and_press: {
     title: 'Media & Press',
-    badge: 'Press Pass',
-    description: 'Personal Accreditation QR Pass screen. Verified at gate entrance by Security.',
-    canScan: false,
-  },
-  pr: {
-    title: 'Public Relations (PR)',
-    badge: 'VIP Liaison Pass',
-    description: 'Personal VIP Liaison QR Pass screen. Verified at gate entrance by Security.',
+    badge: 'Media & Press Pass',
+    description: 'Media heads, press heads, and press corps. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
   marketing: {
     title: 'Marketing',
-    badge: 'Staff Pass',
-    description: 'Personal Staff QR Pass screen. Verified at gate entrance by Security.',
+    badge: 'Marketing Team Pass',
+    description: 'Head of Marketing, Co-Head, and Marketing Members. Personal verified QR Pass for MUN Venue entrance.',
+    canScan: false,
+  },
+  pr: {
+    title: 'Public Relations (PR)',
+    badge: 'PR Pass',
+    description: 'Head of PR and external relations. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
   hr: {
-    title: 'HR (Human Resources)',
-    badge: 'Personnel Pass',
-    description: 'Personal Staff QR Pass screen. Verified at gate entrance by Security.',
+    title: 'Human Resources (HR)',
+    badge: 'HR Pass',
+    description: 'Head of HR and delegate staffing affairs. Personal verified QR Pass for MUN Venue entrance.',
+    canScan: false,
+  },
+  volunteers: {
+    title: 'Volunteers (Vols)',
+    badge: 'Volunteers Pass',
+    description: 'Head of Male Vols, Head of Female Vols, and Co-Heads. Personal verified QR Pass for MUN Venue entrance.',
+    canScan: false,
+  },
+  logistics: {
+    title: 'Logistics',
+    badge: 'Logistics Pass',
+    description: 'Head of Logistics. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
   secretary: {
-    title: 'Secretary',
-    badge: 'Staff Pass',
-    description: 'Personal Secretariat QR Pass screen. Verified at gate entrance by Security.',
+    title: 'Secretariat (Sec)',
+    badge: 'Secretariat Pass',
+    description: 'Head of Male Sec, Head of Female Sec, and Co-Head of Sec. Personal verified QR Pass for MUN Venue entrance.',
+    canScan: false,
+  },
+  ceremonies: {
+    title: 'Ceremonies',
+    badge: 'Ceremonies Pass',
+    description: 'Head of Ceremonies. Personal verified QR Pass for MUN Venue entrance.',
+    canScan: false,
+  },
+  dcc: {
+    title: 'DCC (Digital / Committee Control)',
+    badge: 'DCC Pass',
+    description: 'Head of DCC. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
   doc_department: {
-    title: 'Documentation Department',
-    badge: 'Staff Pass',
-    description: 'Personal Documentation QR Pass screen. Verified at gate entrance by Security.',
+    title: 'Documentation',
+    badge: 'Documentation Pass',
+    description: 'Resolutions and documentation department. Personal verified QR Pass for MUN Venue entrance.',
     canScan: false,
   },
 };

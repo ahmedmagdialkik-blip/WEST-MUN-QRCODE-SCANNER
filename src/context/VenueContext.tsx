@@ -27,7 +27,8 @@ interface VenueContextType {
   register: (staffData: Omit<StaffMember, 'id'>) => { success: boolean; error?: string };
   logout: () => void;
   switchAccountFast: (staffId: string) => void;
-  processScan: (rawCode: string) => ScanResult;
+  processScan: (rawCode: string, mode?: 'entry' | 'exit') => ScanResult;
+  markGuestLeft: (guestId: string) => boolean;
   manualCheckIn: (guestId: string) => boolean;
   undoCheckIn: (guestId: string) => boolean;
   flagSecurityIncident: (guestId: string, reason: string) => void;
@@ -45,6 +46,7 @@ interface VenueContextType {
   stats: {
     totalGuests: number;
     checkedInCount: number;
+    leftCount: number;
     pendingCount: number;
     capacityRemaining: number;
     capacityPercent: number;
@@ -54,37 +56,39 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'westmun_venue_guests_v4';
-const STORAGE_KEY_STAFF = 'westmun_venue_staff_v4';
-const STORAGE_KEY_SETTINGS = 'westmun_venue_settings_v4';
-const STORAGE_KEY_LOGS = 'westmun_venue_logs_v4';
-const STORAGE_KEY_AUTH = 'westmun_venue_auth_v4';
+const STORAGE_KEY_GUESTS = 'mun_venue_guests_v8';
+const STORAGE_KEY_STAFF = 'mun_venue_staff_v8';
+const STORAGE_KEY_SETTINGS = 'mun_venue_settings_v8';
+const STORAGE_KEY_LOGS = 'mun_venue_logs_v8';
+const STORAGE_KEY_AUTH = 'mun_venue_auth_v8';
 
 const DEFAULT_SETTINGS: VenueSettings = {
-  venueName: 'West Mun Grand Venue',
+  venueName: 'MUN Venue',
   totalCapacity: 1200,
-  currentEventName: 'The Gold Gala • West Mun Residency',
+  currentEventName: 'WESTMUN Conference',
   eventDate: new Date().toISOString().split('T')[0],
   warningCapacityPercentage: 85,
   soundEnabled: true,
   vibrationEnabled: true,
   autoResetScanDelayMs: 4000,
-  strictAntiPassback: true, // Strict mode: Re-scanning any admitted QR code is permanently rejected
+  strictAntiPassback: true, // Only scanned once unless someone leaves, then they can re-scan!
 };
 
-// Pre-seeded staff accounts representing all 10 requested roles
-// RULE: ONLY Security and Admins (Super Admin and Ceremony Director) have the ability to scan.
-// Everyone else has canScan: false and sees their scannable QR Pass Screen.
+// Official staff accounts for MUN Venue with roles explicitly assigned.
+// ONLY members of Security and IT (and master Super Admin) can scan QR codes.
+// Both IT and Security members have the ability to add members to their team.
+// All other roles (Design, Media, PR, HR, etc.) have their personal scannable QR Pass.
 const INITIAL_STAFF: StaffMember[] = [
+  // Executive Board & Leadership
   {
-    id: 'staff-admin-1',
-    name: 'Ahmed Al-Kik',
-    email: 'admin@westmun.com',
+    id: 'staff-rakan',
+    name: 'Rakan Almerbed',
+    email: 'rakan.almerbed@munvenue.org',
     password: 'gold2026',
     role: 'super_admin',
-    accessKey: '9900',
-    assignedGate: 'West Mun Executive Control',
-    ticketId: 'WM-STAFF-ADMIN-9900',
+    accessKey: '1001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-01',
     canScan: true,
     canManualCheckIn: true,
     canRevokeCheckIn: true,
@@ -94,14 +98,67 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
   {
-    id: 'staff-ceremony-1',
-    name: 'Marcus Vance',
-    email: 'ceremony@westmun.com',
+    id: 'staff-yousef-saifi',
+    name: 'Yousef Saifi',
+    email: 'yousef.saifi@munvenue.org',
     password: 'gold2026',
-    role: 'ceremony_director',
-    accessKey: '1100',
-    assignedGate: 'Main Stage & Protocol Suite',
-    ticketId: 'WM-STAFF-CEREMONY-1100',
+    role: 'executive',
+    accessKey: '1002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-fahad-usg',
+    name: 'Fahad',
+    email: 'fahad.usg@munvenue.org',
+    password: 'gold2026',
+    role: 'executive',
+    accessKey: '1003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-muaz',
+    name: 'Muaz El Amir',
+    email: 'muaz.elamir@munvenue.org',
+    password: 'gold2026',
+    role: 'executive',
+    accessKey: '1004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // IT Team (Can scan + can add members to IT team)
+  {
+    id: 'staff-it-mohamed',
+    name: 'Mohamed Magdi',
+    email: 'mohamed.magdi@munvenue.org',
+    password: 'gold2026',
+    role: 'it',
+    accessKey: '6001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-IT-01',
     canScan: true,
     canManualCheckIn: true,
     canRevokeCheckIn: true,
@@ -111,116 +168,69 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
   {
-    id: 'staff-sec-1',
-    name: 'Viktor Romanov',
-    email: 'security@westmun.com',
+    id: 'staff-it-saleh',
+    name: 'Saleh Samaha',
+    email: 'saleh.samaha@munvenue.org',
+    password: 'gold2026',
+    role: 'it',
+    accessKey: '6002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-IT-02',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Security Team (Can scan + can add members to Security team)
+  {
+    id: 'staff-sec-lead',
+    name: 'Security Lead',
+    email: 'security.lead@munvenue.org',
     password: 'gold2026',
     role: 'security',
-    accessKey: '2200',
-    assignedGate: 'Main Perimeter & Gold Gate A',
-    ticketId: 'WM-STAFF-SEC-2200',
+    accessKey: '7001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-SEC-LEAD-01',
     canScan: true,
     canManualCheckIn: true,
     canRevokeCheckIn: true,
-    canManageStaff: false,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-sec-officer',
+    name: 'Security Officer',
+    email: 'security.officer@munvenue.org',
+    password: 'gold2026',
+    role: 'security',
+    accessKey: '7002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-SEC-OFF-02',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
     canExportData: false,
     isActive: true,
     lastActiveTime: new Date().toISOString(),
   },
+
+  // Secretariat (Sec)
   {
-    id: 'staff-vol-1',
-    name: 'Jordan Reyes',
-    email: 'volunteer@westmun.com',
-    password: 'gold2026',
-    role: 'volunteers',
-    accessKey: '3300',
-    assignedGate: 'North Turnstile Lane 1',
-    ticketId: 'WM-STAFF-VOL-3300',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: false,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-press-1',
-    name: 'Clara Oswald',
-    email: 'press@westmun.com',
-    password: 'gold2026',
-    role: 'media_and_press',
-    accessKey: '4400',
-    assignedGate: 'Press Desk & Media Lounge',
-    ticketId: 'WM-STAFF-PRESS-4400',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-pr-1',
-    name: 'Sophia Chen',
-    email: 'pr@westmun.com',
-    password: 'gold2026',
-    role: 'pr',
-    accessKey: '5500',
-    assignedGate: 'Gold Carpet & VIP Entrance',
-    ticketId: 'WM-STAFF-PR-5500',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-mkt-1',
-    name: 'Devon Miller',
-    email: 'marketing@westmun.com',
-    password: 'gold2026',
-    role: 'marketing',
-    accessKey: '6600',
-    assignedGate: 'Guest Relations Lounge',
-    ticketId: 'WM-STAFF-MKT-6600',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-hr-1',
-    name: 'Elena Rostova',
-    email: 'hr@westmun.com',
-    password: 'gold2026',
-    role: 'hr',
-    accessKey: '7700',
-    assignedGate: 'Staff Operations Hub',
-    ticketId: 'WM-STAFF-HR-7700',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-sec-dept-1',
-    name: 'Maya Lin',
-    email: 'secretary@westmun.com',
+    id: 'staff-sec-yusef',
+    name: 'Yusef Saad',
+    email: 'yusef.saad@munvenue.org',
     password: 'gold2026',
     role: 'secretary',
-    accessKey: '8800',
-    assignedGate: 'Secretariat & Manifest Desk',
-    ticketId: 'WM-STAFF-SECY-8800',
+    accessKey: '2001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-SEC-01',
     canScan: false,
     canManualCheckIn: false,
     canRevokeCheckIn: false,
@@ -230,14 +240,415 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
   {
-    id: 'staff-doc-1',
-    name: 'Julian Sterling',
-    email: 'doc@westmun.com',
+    id: 'staff-sec-najla',
+    name: 'Najla Rami',
+    email: 'najla.rami@munvenue.org',
     password: 'gold2026',
-    role: 'doc_department',
-    accessKey: '9901',
-    assignedGate: 'Documentation Archive Unit',
-    ticketId: 'WM-STAFF-DOC-9901',
+    role: 'secretary',
+    accessKey: '2002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-SEC-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-sec-bushra',
+    name: 'Bushra Ismail',
+    email: 'bushra.ismail@munvenue.org',
+    password: 'gold2026',
+    role: 'secretary',
+    accessKey: '2003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-SEC-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Marketing
+  {
+    id: 'staff-mkt-naya',
+    name: 'Naya Barakat',
+    email: 'naya.barakat@munvenue.org',
+    password: 'gold2026',
+    role: 'marketing',
+    accessKey: '3001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MKT-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-mkt-sama',
+    name: 'Sama Sameh',
+    email: 'sama.sameh@munvenue.org',
+    password: 'gold2026',
+    role: 'marketing',
+    accessKey: '3002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MKT-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-mkt-jayda',
+    name: 'Jayda Yasser',
+    email: 'jayda.yasser@munvenue.org',
+    password: 'gold2026',
+    role: 'marketing',
+    accessKey: '3003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MKT-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Design
+  {
+    id: 'staff-des-mallak',
+    name: 'Mallak Abbas',
+    email: 'mallak.abbas@munvenue.org',
+    password: 'gold2026',
+    role: 'designers',
+    accessKey: '4001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-DES-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-des-saud',
+    name: 'Saud Alanazi',
+    email: 'saud.alanazi@munvenue.org',
+    password: 'gold2026',
+    role: 'designers',
+    accessKey: '4002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-DES-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-des-layan',
+    name: 'Layan Ahmed',
+    email: 'layan.ahmed@munvenue.org',
+    password: 'gold2026',
+    role: 'designers',
+    accessKey: '4003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-DES-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-des-aya',
+    name: 'Aya Nezar',
+    email: 'aya.nezar@munvenue.org',
+    password: 'gold2026',
+    role: 'designers',
+    accessKey: '4004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-DES-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Media & Press
+  {
+    id: 'staff-med-hashem',
+    name: 'Hashem',
+    email: 'hashem.media@munvenue.org',
+    password: 'gold2026',
+    role: 'media_and_press',
+    accessKey: '5001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MED-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-med-fahad',
+    name: 'Fahad Al Kendi',
+    email: 'fahad.alkendi@munvenue.org',
+    password: 'gold2026',
+    role: 'media_and_press',
+    accessKey: '5002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MED-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-med-selena',
+    name: 'Selena',
+    email: 'selena.media@munvenue.org',
+    password: 'gold2026',
+    role: 'media_and_press',
+    accessKey: '5003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MED-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-med-mohammed',
+    name: 'Mohammed Al Nahas',
+    email: 'mohammed.alnahas@munvenue.org',
+    password: 'gold2026',
+    role: 'media_and_press',
+    accessKey: '5004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MED-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-med-dana',
+    name: 'Dana Alnajar',
+    email: 'dana.alnajar@munvenue.org',
+    password: 'gold2026',
+    role: 'media_and_press',
+    accessKey: '5005',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-MED-05',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Volunteers (Vols)
+  {
+    id: 'staff-vol-saad',
+    name: 'Saad Usman',
+    email: 'saad.usman@munvenue.org',
+    password: 'gold2026',
+    role: 'volunteers',
+    accessKey: '8001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-VOL-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-vol-maram',
+    name: 'Maram Ali',
+    email: 'maram.ali@munvenue.org',
+    password: 'gold2026',
+    role: 'volunteers',
+    accessKey: '8002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-VOL-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-vol-ahmed-magdi',
+    name: 'Ahmed Magdi',
+    email: 'ahmed.magdi.vol@munvenue.org',
+    password: 'gold2026',
+    role: 'volunteers',
+    accessKey: '8003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-VOL-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-vol-younis',
+    name: 'Younis',
+    email: 'younis.vol@munvenue.org',
+    password: 'gold2026',
+    role: 'volunteers',
+    accessKey: '8004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-VOL-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Other Departments
+  {
+    id: 'staff-log-ahmed',
+    name: 'Ahmed El Amir',
+    email: 'ahmed.elamir@munvenue.org',
+    password: 'gold2026',
+    role: 'logistics',
+    accessKey: '9001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-LOG-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-pr-mazen',
+    name: 'Mazen Alaa',
+    email: 'mazen.alaa@munvenue.org',
+    password: 'gold2026',
+    role: 'pr',
+    accessKey: '9002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-PR-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-hr-hoorein',
+    name: 'Hoorein',
+    email: 'hoorein.hr@munvenue.org',
+    password: 'gold2026',
+    role: 'hr',
+    accessKey: '9003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-HR-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-hr-seif',
+    name: 'Seif Ayman',
+    email: 'seif.ayman@munvenue.org',
+    password: 'gold2026',
+    role: 'hr',
+    accessKey: '9004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-HR-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-cer-sultana',
+    name: 'Sultana',
+    email: 'sultana.ceremonies@munvenue.org',
+    password: 'gold2026',
+    role: 'ceremonies',
+    accessKey: '9005',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-CER-01',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-dcc-majd',
+    name: 'Majd',
+    email: 'majd.dcc@munvenue.org',
+    password: 'gold2026',
+    role: 'dcc',
+    accessKey: '9006',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-DCC-01',
     canScan: false,
     canManualCheckIn: false,
     canRevokeCheckIn: false,
@@ -248,178 +659,386 @@ const INITIAL_STAFF: StaffMember[] = [
   },
 ];
 
+// All official credential passes for WESTMUN.
+// Each person is listed with their exact designated role written for them.
 const INITIAL_GUESTS: Guest[] = [
-  // Official Staff Passes (Scanned at entrance by Security)
+  // Executive Board & Leadership
   {
-    id: 'g-staff-vol',
-    name: 'Jordan Reyes',
-    ticketId: 'WM-STAFF-VOL-3300',
-    category: 'Staff',
-    tableOrSeat: 'North Turnstile Lane 1',
-    notes: 'Volunteers Department Credential Pass',
+    id: 'g-exec-rakan',
+    name: 'Rakan Almerbed',
+    ticketId: 'MUN-EXEC-01',
+    category: 'VIP',
+    role: 'Secretary General',
+    tableOrSeat: 'Executive Board',
+    notes: 'Executive Board & Leadership',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-staff-press',
-    name: 'Clara Oswald',
-    ticketId: 'WM-STAFF-PRESS-4400',
-    category: 'Press',
-    tableOrSeat: 'Press Desk & Media Lounge',
-    notes: 'Media & Press Accreditation Pass',
+    id: 'g-exec-yousef',
+    name: 'Yousef Saifi',
+    ticketId: 'MUN-EXEC-02',
+    category: 'VIP',
+    role: 'Deputy Secretary General',
+    tableOrSeat: 'Executive Board',
+    notes: 'Executive Board & Leadership',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-staff-pr',
-    name: 'Sophia Chen',
-    ticketId: 'WM-STAFF-PR-5500',
-    category: 'Staff',
-    tableOrSeat: 'Gold Carpet & VIP Entrance',
-    notes: 'Public Relations VIP Liaison Pass',
+    id: 'g-exec-fahad',
+    name: 'Fahad',
+    ticketId: 'MUN-EXEC-03',
+    category: 'VIP',
+    role: 'Under Secretary General',
+    tableOrSeat: 'Executive Board',
+    notes: 'Executive Board & Leadership',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-staff-mkt',
-    name: 'Devon Miller',
-    ticketId: 'WM-STAFF-MKT-6600',
-    category: 'Staff',
-    tableOrSeat: 'Guest Relations Lounge',
-    notes: 'Marketing Department Staff Pass',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
-    id: 'g-staff-hr',
-    name: 'Elena Rostova',
-    ticketId: 'WM-STAFF-HR-7700',
-    category: 'Staff',
-    tableOrSeat: 'Staff Operations Hub',
-    notes: 'Human Resources Staff Pass',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
-    id: 'g-staff-secy',
-    name: 'Maya Lin',
-    ticketId: 'WM-STAFF-SECY-8800',
-    category: 'Staff',
-    tableOrSeat: 'Secretariat & Manifest Desk',
-    notes: 'Secretary Department Staff Pass',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
-    id: 'g-staff-doc',
-    name: 'Julian Sterling',
-    ticketId: 'WM-STAFF-DOC-9901',
-    category: 'Staff',
-    tableOrSeat: 'Documentation Archive Unit',
-    notes: 'Documentation Department Staff Pass',
+    id: 'g-exec-muaz',
+    name: 'Muaz El Amir',
+    ticketId: 'MUN-EXEC-04',
+    category: 'VIP',
+    role: 'Senior Advisor',
+    tableOrSeat: 'Executive Board',
+    notes: 'Executive Board & Leadership',
     status: 'Pending',
     scanCount: 0,
   },
 
-  // General Attendees & VIPs
+  // Secretariat (Sec)
   {
-    id: 'g-1',
-    name: 'Alexander Wright',
-    ticketId: 'WM-VIP-8891',
-    category: 'VIP',
-    tableOrSeat: 'Gold Tier • Table 14',
-    notes: 'Includes VIP champagne service & private lounge access',
+    id: 'g-sec-yusef',
+    name: 'Yusef Saad',
+    ticketId: 'MUN-SEC-01',
+    category: 'Staff',
+    role: 'Head of Male Sec',
+    tableOrSeat: 'Secretariat',
+    notes: 'Secretariat (Sec) Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-2',
-    name: 'Elena Rostova (Guest Pass)',
-    ticketId: 'WM-GA-4412',
-    category: 'General Admission',
-    tableOrSeat: 'Main Auditorium Tier 1',
+    id: 'g-sec-najla',
+    name: 'Najla Rami',
+    ticketId: 'MUN-SEC-02',
+    category: 'Staff',
+    role: 'Head of Female Sec',
+    tableOrSeat: 'Secretariat',
+    notes: 'Secretariat (Sec) Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-3',
-    name: 'Marcus Vance',
-    ticketId: 'WM-ART-1002',
-    category: 'Artist',
-    tableOrSeat: 'Presidential Green Room',
-    notes: 'Keynote Performer Entourage - All-Access Gold Lanyard',
+    id: 'g-sec-bushra',
+    name: 'Bushra Ismail',
+    ticketId: 'MUN-SEC-03',
+    category: 'Staff',
+    role: 'Co-Head of Sec',
+    tableOrSeat: 'Secretariat',
+    notes: 'Secretariat (Sec) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Marketing
+  {
+    id: 'g-mkt-naya',
+    name: 'Naya Barakat',
+    ticketId: 'MUN-MKT-01',
+    category: 'Staff',
+    role: 'Head of Marketing',
+    tableOrSeat: 'Marketing Hub',
+    notes: 'Marketing Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-4',
-    name: 'Sophia Chen (VIP Guest)',
-    ticketId: 'WM-VIP-8892',
-    category: 'VIP',
-    tableOrSeat: 'Gold Tier • Table 14',
-    notes: 'Alexander Wright +1',
-    status: 'Checked-In',
-    scanCount: 1,
-    checkedInTime: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
-    checkedInBy: 'Viktor Romanov (Security)',
-    checkedInGate: 'Main Perimeter & Gold Gate A',
-  },
-  {
-    id: 'g-5',
-    name: 'Devon Miller (Guest Pass)',
-    ticketId: 'WM-GA-4413',
-    category: 'General Admission',
-    tableOrSeat: 'Floor Section B',
+    id: 'g-mkt-sama',
+    name: 'Sama Sameh',
+    ticketId: 'MUN-MKT-02',
+    category: 'Staff',
+    role: 'Co-Head of Marketing',
+    tableOrSeat: 'Marketing Hub',
+    notes: 'Marketing Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-6',
-    name: 'Clara Oswald (Press Pass)',
-    ticketId: 'WM-PRS-3021',
+    id: 'g-mkt-jayda',
+    name: 'Jayda Yasser',
+    ticketId: 'MUN-MKT-03',
+    category: 'Staff',
+    role: 'Marketing Member',
+    tableOrSeat: 'Marketing Hub',
+    notes: 'Marketing Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Design
+  {
+    id: 'g-des-mallak',
+    name: 'Mallak Abbas',
+    ticketId: 'MUN-DES-01',
+    category: 'Staff',
+    role: 'Head of Design',
+    tableOrSeat: 'Design Studio',
+    notes: 'Design Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-des-saud',
+    name: 'Saud Alanazi',
+    ticketId: 'MUN-DES-02',
+    category: 'Staff',
+    role: 'Co-Heads of Design',
+    tableOrSeat: 'Design Studio',
+    notes: 'Design Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-des-layan',
+    name: 'Layan Ahmed',
+    ticketId: 'MUN-DES-03',
+    category: 'Staff',
+    role: 'Designer',
+    tableOrSeat: 'Design Studio',
+    notes: 'Design Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-des-aya',
+    name: 'Aya Nezar',
+    ticketId: 'MUN-DES-04',
+    category: 'Staff',
+    role: 'Designer',
+    tableOrSeat: 'Design Studio',
+    notes: 'Design Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Media & Press
+  {
+    id: 'g-med-hashem',
+    name: 'Hashem',
+    ticketId: 'MUN-MED-01',
     category: 'Press',
-    tableOrSeat: 'Media Box 3',
-    notes: 'Approved for stage front DSLR photography and interview pit',
+    role: 'Co-Head of Media/Press',
+    tableOrSeat: 'Media Gallery',
+    notes: 'Media & Press Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-7',
-    name: 'Liam Sterling',
-    ticketId: 'WM-VIP-8895',
-    category: 'VIP',
-    tableOrSeat: 'Gold Tier • Booth 4',
+    id: 'g-med-fahad',
+    name: 'Fahad Al Kendi',
+    ticketId: 'MUN-MED-02',
+    category: 'Press',
+    role: 'Head of Male Media',
+    tableOrSeat: 'Media Gallery',
+    notes: 'Media & Press Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-8',
-    name: 'Maya Lin (Guest Pass)',
-    ticketId: 'WM-GA-4414',
-    category: 'General Admission',
-    tableOrSeat: 'Floor Section A',
-    status: 'Checked-In',
-    scanCount: 1,
-    checkedInTime: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
-    checkedInBy: 'Viktor Romanov (Security)',
-    checkedInGate: 'Main Perimeter & Gold Gate A',
-  },
-  {
-    id: 'g-9',
-    name: 'David O\'Reilly',
-    ticketId: 'WM-VIP-8898',
-    category: 'VIP',
-    tableOrSeat: 'Gold Table 8',
+    id: 'g-med-selena',
+    name: 'Selena',
+    ticketId: 'MUN-MED-03',
+    category: 'Press',
+    role: 'Head of Female Media',
+    tableOrSeat: 'Media Gallery',
+    notes: 'Media & Press Department',
     status: 'Pending',
     scanCount: 0,
   },
   {
-    id: 'g-10',
-    name: 'Amara Okafor',
-    ticketId: 'WM-ART-1005',
-    category: 'Backstage',
-    tableOrSeat: 'Production Suite',
-    notes: 'Visual Director Pass',
+    id: 'g-med-mohammed',
+    name: 'Mohammed Al Nahas',
+    ticketId: 'MUN-MED-04',
+    category: 'Press',
+    role: 'Head of Male Press',
+    tableOrSeat: 'Press Room',
+    notes: 'Media & Press Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-med-dana',
+    name: 'Dana Alnajar',
+    ticketId: 'MUN-MED-05',
+    category: 'Press',
+    role: 'Head of Female Press',
+    tableOrSeat: 'Press Room',
+    notes: 'Media & Press Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // IT (Can scan + can add members to IT team)
+  {
+    id: 'g-it-mohamed',
+    name: 'Mohamed Magdi',
+    ticketId: 'MUN-IT-01',
+    category: 'Staff',
+    role: 'Head of IT',
+    tableOrSeat: 'IT Command',
+    notes: 'IT Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-it-saleh',
+    name: 'Saleh Samaha',
+    ticketId: 'MUN-IT-02',
+    category: 'Staff',
+    role: 'Co-Head of IT',
+    tableOrSeat: 'IT Command',
+    notes: 'IT Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Security (Can scan + can add members to Security team)
+  {
+    id: 'g-sec-lead',
+    name: 'Security Lead',
+    ticketId: 'MUN-SEC-LEAD-01',
+    category: 'Staff',
+    role: 'Head of Security',
+    tableOrSeat: 'Main Entrance Gate',
+    notes: 'Security Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-sec-officer',
+    name: 'Security Officer',
+    ticketId: 'MUN-SEC-OFF-02',
+    category: 'Staff',
+    role: 'Security Officer',
+    tableOrSeat: 'Access Control',
+    notes: 'Security Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Volunteers (Vols)
+  {
+    id: 'g-vol-saad',
+    name: 'Saad Usman',
+    ticketId: 'MUN-VOL-01',
+    category: 'Staff',
+    role: 'Head of Male Vols',
+    tableOrSeat: 'Floor Operations',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-vol-maram',
+    name: 'Maram Ali',
+    ticketId: 'MUN-VOL-02',
+    category: 'Staff',
+    role: 'Head of Female Vols',
+    tableOrSeat: 'Floor Operations',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-vol-ahmed',
+    name: 'Ahmed Magdi',
+    ticketId: 'MUN-VOL-03',
+    category: 'Staff',
+    role: 'Co-Head of Vols',
+    tableOrSeat: 'Floor Operations',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-vol-younis',
+    name: 'Younis',
+    ticketId: 'MUN-VOL-04',
+    category: 'Staff',
+    role: 'Co-Head of Vols',
+    tableOrSeat: 'Floor Operations',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Other Departments
+  {
+    id: 'g-log-ahmed',
+    name: 'Ahmed El Amir',
+    ticketId: 'MUN-LOG-01',
+    category: 'Staff',
+    role: 'Head of Logistics',
+    tableOrSeat: 'Logistics Center',
+    notes: 'Logistics Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-pr-mazen',
+    name: 'Mazen Alaa',
+    ticketId: 'MUN-PR-01',
+    category: 'Staff',
+    role: 'Head of PR',
+    tableOrSeat: 'VIP Relations',
+    notes: 'Public Relations (PR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-hr-hoorein',
+    name: 'Hoorein',
+    ticketId: 'MUN-HR-01',
+    category: 'Staff',
+    role: 'Head of HR',
+    tableOrSeat: 'HR Operations',
+    notes: 'Human Resources (HR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-hr-seif',
+    name: 'Seif Ayman',
+    ticketId: 'MUN-HR-02',
+    category: 'Staff',
+    role: 'Head of HR',
+    tableOrSeat: 'HR Operations',
+    notes: 'Human Resources (HR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-cer-sultana',
+    name: 'Sultana',
+    ticketId: 'MUN-CER-01',
+    category: 'Staff',
+    role: 'Head of Ceremonies',
+    tableOrSeat: 'Ceremonies Stage',
+    notes: 'Ceremonies Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-dcc-majd',
+    name: 'Majd',
+    ticketId: 'MUN-DCC-01',
+    category: 'Staff',
+    role: 'Head of DCC',
+    tableOrSeat: 'DCC Control Room',
+    notes: 'Digital Committee Control (DCC) Department',
     status: 'Pending',
     scanCount: 0,
   },
@@ -448,6 +1067,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return INITIAL_STAFF;
   });
 
+  // MANDATORY LOGIN REQUIREMENT:
+  // User MUST log in with an account beforehand!
+  // No automatic fallback to staffMembers[0]; null means unauthenticated.
   const [currentUser, setCurrentUser] = useState<StaffMember | null>(() => {
     try {
       const savedAuthId = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -458,8 +1080,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.error(e);
     }
-    // Default to Super Admin for immediate review
-    return staffMembers[0];
+    return null;
   });
 
   const [settings, setSettings] = useState<VenueSettings>(() => {
@@ -482,22 +1103,12 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return [
       {
         id: 'log-1',
-        ticketId: 'WM-VIP-8892',
-        guestName: 'Sophia Chen',
+        ticketId: 'MUN-EXEC-01',
+        guestName: 'Rakan Almerbed',
         category: 'VIP',
-        gate: 'Gold Carpet & VIP Entrance',
-        scannerName: 'Sophia Chen (PR Desk)',
-        timestamp: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
-        type: 'CHECK_IN',
-      },
-      {
-        id: 'log-2',
-        ticketId: 'WM-GA-4414',
-        guestName: 'Maya Lin',
-        category: 'General Admission',
-        gate: 'North Turnstile Lane 1',
-        scannerName: 'Jordan Reyes (Volunteers)',
-        timestamp: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+        gate: 'MUN Venue',
+        scannerName: 'Mohamed Magdi (Head of IT)',
+        timestamp: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
         type: 'CHECK_IN',
       },
     ];
@@ -534,7 +1145,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Sync across tabs
   useEffect(() => {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
-    const channel = new BroadcastChannel('westmun_gold_venue_sync');
+    const channel = new BroadcastChannel('mun_venue_sync');
 
     channel.onmessage = (event) => {
       const data = event.data;
@@ -553,7 +1164,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const broadcastUpdate = useCallback((updatedGuests: Guest[], updatedLogs: CheckInLogEntry[]) => {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
-        const channel = new BroadcastChannel('westmun_gold_venue_sync');
+        const channel = new BroadcastChannel('mun_venue_sync');
         channel.postMessage({
           type: 'SYNC_ALL',
           guests: updatedGuests,
@@ -581,14 +1192,14 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!user) {
         return {
           success: false,
-          error: 'Invalid credentials. Password or staff email does not match any West Mun account.',
+          error: 'Invalid credentials. Password or staff email does not match any MUN Venue account.',
         };
       }
 
       if (!user.isActive) {
         return {
           success: false,
-          error: 'This account has been deactivated by the Security or HR department.',
+          error: 'This account has been deactivated by Security administration.',
         };
       }
 
@@ -601,23 +1212,26 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const register = useCallback(
     (staffData: Omit<StaffMember, 'id'>): { success: boolean; error?: string } => {
       if (!staffData.email || !staffData.name || !staffData.password) {
-        return { success: false, error: 'Name, email, and password are required to create an account.' };
+        return { success: false, error: 'Name, email, and password are required.' };
       }
 
-      const existing = staffMembers.find((s) => s.email.toLowerCase() === staffData.email.toLowerCase());
+      const existing = staffMembers.find(
+        (s) => s.email.toLowerCase() === staffData.email.toLowerCase()
+      );
       if (existing) {
-        return { success: false, error: 'A staff member with this email already exists.' };
+        return { success: false, error: 'A user with this email address already exists.' };
       }
 
       const canScan = isScannerOrAdminRole(staffData.role);
-      const accessPin = staffData.accessKey || String(Math.floor(1000 + Math.random() * 9000));
-      const generatedTicketId = staffData.ticketId || `WM-STAFF-${staffData.role.toUpperCase()}-${accessPin}`;
+      const generatedPin = staffData.accessKey || String(Math.floor(1000 + Math.random() * 9000));
+      const generatedTicketId = `MUN-STAFF-${staffData.role.substring(0, 3).toUpperCase()}-${generatedPin}`;
 
       const newMember: StaffMember = {
         ...staffData,
         id: `staff-${Date.now()}`,
-        accessKey: accessPin,
+        accessKey: generatedPin,
         ticketId: generatedTicketId,
+        assignedGate: 'MUN Venue',
         canScan,
         canManualCheckIn: canScan,
         canRevokeCheckIn: canScan,
@@ -636,7 +1250,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           name: newMember.name,
           ticketId: generatedTicketId,
           category: newMember.role === 'media_and_press' ? 'Press' : 'Staff',
-          tableOrSeat: newMember.assignedGate || 'West Mun Staff Zone',
+          tableOrSeat: 'MUN Venue',
           notes: `${ROLE_LABELS[newMember.role]?.title || 'Staff'} Credential Pass`,
           status: 'Pending',
           scanCount: 0,
@@ -649,6 +1263,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const logout = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY_AUTH);
     setCurrentUser(null);
   }, []);
 
@@ -663,20 +1278,17 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   // Process QR / Barcode Scan
+  // Mode can be 'entry' (default) or 'exit' (when someone leaves)
   const processScan = useCallback(
-    (rawCode: string): ScanResult => {
+    (rawCode: string, mode: 'entry' | 'exit' = 'entry'): ScanResult => {
       const cleanCode = (rawCode || '').trim();
       const nowIso = new Date().toISOString();
 
-      // If the current user has scanner authorization, attribute scan to them.
-      // If a non-scanner user clicked "simulate scan" from their pass screen, attribute to on-duty Security.
       const isSecurityOrAdminScanner = isScannerOrAdminRole(currentUser?.role);
       const currentScannerName = isSecurityOrAdminScanner && currentUser
         ? `${currentUser.name} (${ROLE_LABELS[currentUser.role]?.title || 'Security'})`
-        : 'Viktor Romanov (Security)';
-      const currentGate = isSecurityOrAdminScanner && currentUser
-        ? currentUser.assignedGate
-        : 'Main Perimeter & Gold Gate A';
+        : 'Mohamed Magdi (Head of IT)';
+      const currentGate = 'MUN Venue';
 
       if (!cleanCode) {
         const res: ScanResult = {
@@ -708,7 +1320,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             name: matchingStaff.name,
             ticketId: matchingStaff.ticketId || cleanCode,
             category: matchingStaff.role === 'media_and_press' ? 'Press' : 'Staff',
-            tableOrSeat: matchingStaff.assignedGate || 'Staff Operations',
+            tableOrSeat: 'MUN Venue',
             notes: `${ROLE_LABELS[matchingStaff.role]?.title} Credential Pass`,
             status: 'Pending',
             scanCount: 0,
@@ -723,7 +1335,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           type: 'INVALID_TICKET',
           scannedCode: cleanCode,
           timestamp: nowIso,
-          message: 'Ticket ID not found in West Mun guest manifest.',
+          message: 'Ticket ID not found in MUN Venue manifest.',
         };
 
         if (settings.soundEnabled) playErrorAlarm();
@@ -738,7 +1350,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           scannerName: currentScannerName,
           timestamp: nowIso,
           type: 'DENIED_ATTEMPT',
-          reason: 'Ticket not found in official manifest',
+          reason: 'Ticket not found in MUN Venue guest manifest',
         };
 
         const updatedLogs = [newLog, ...logs];
@@ -750,8 +1362,74 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const guest = guests[guestIndex];
 
-      // Strict Anti-Passback Check: Cannot re-scan the same QR code again!
+      // ==========================================
+      // EXIT MODE SCAN: Someone is leaving MUN Venue
+      // ==========================================
+      if (mode === 'exit') {
+        if (guest.status === 'Checked-In') {
+          // Confirm exit! Now they can re-scan later!
+          const updatedGuest: Guest = {
+            ...guest,
+            status: 'Left',
+            lastExitedTime: nowIso,
+            lastExitedBy: currentScannerName,
+          };
+
+          const updatedGuests = [...guests];
+          updatedGuests[guestIndex] = updatedGuest;
+
+          const newLog: CheckInLogEntry = {
+            id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            ticketId: guest.ticketId,
+            guestName: guest.name,
+            category: guest.category,
+            gate: currentGate,
+            scannerName: currentScannerName,
+            timestamp: nowIso,
+            type: 'CHECK_OUT',
+            reason: 'Guest left MUN Venue. Eligible for re-entry scan.',
+          };
+
+          const updatedLogs = [newLog, ...logs];
+          setGuests(updatedGuests);
+          setLogs(updatedLogs);
+          broadcastUpdate(updatedGuests, updatedLogs);
+
+          if (settings.soundEnabled) playSuccessChime();
+          if (settings.vibrationEnabled) vibrateSuccess();
+
+          const res: ScanResult = {
+            type: 'EXIT_SUCCESS',
+            guest: updatedGuest,
+            scannedCode: cleanCode,
+            timestamp: nowIso,
+            message: `Exit Recorded: ${guest.name} has departed MUN Venue. QR code is now unlocked for re-entry scan.`,
+          };
+
+          setLastScanResult(res);
+          return res;
+        } else {
+          // Not currently in venue
+          const res: ScanResult = {
+            type: 'NOT_CHECKED_IN',
+            guest,
+            scannedCode: cleanCode,
+            timestamp: nowIso,
+            message: `${guest.name} is not currently checked in to MUN Venue (${guest.status === 'Left' ? 'Already departed' : 'Has not entered yet'}).`,
+          };
+          if (settings.soundEnabled) playWarningBuzzer();
+          setLastScanResult(res);
+          return res;
+        }
+      }
+
+      // ==========================================
+      // ENTRY MODE SCAN: Someone is entering
+      // ==========================================
+
+      // RULE: Make sure the QR code can be scanned only once UNLESS someone leaves, then they can re-scan!
       if (guest.status === 'Checked-In') {
+        // Person is currently inside MUN Venue! Re-scan is strictly blocked!
         const currentCount = guest.scanCount || 1;
         const nextAttemptNum = currentCount + 1;
 
@@ -777,11 +1455,11 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           timestamp: nowIso,
           attemptNumber: nextAttemptNum,
           duplicateAttemptsCount: nextAttemptNum - 1,
-          message: `ENTRY DENIED: QR Code was already scanned and admitted at ${guest.checkedInTime ? new Date(guest.checkedInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'earlier'}. Re-scanning is strictly blocked. (Attempt #${nextAttemptNum})`,
+          message: `ENTRY DENIED: QR Code is already scanned and currently inside MUN Venue. QR code can only be scanned once unless person leaves first. (Attempt #${nextAttemptNum})`,
           previousCheckIn: {
             time: guest.checkedInTime || 'Unknown',
-            scanner: guest.checkedInBy || 'Door Staff',
-            gate: guest.checkedInGate || undefined,
+            scanner: guest.checkedInBy || 'Security',
+            gate: 'MUN Venue',
           },
         };
 
@@ -804,7 +1482,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           timestamp: nowIso,
           type: 'DENIED_ATTEMPT',
           attemptCount: nextAttemptNum,
-          reason: `SECURITY ALERT: Blocked re-scan attempt #${nextAttemptNum} at ${currentGate}. Already admitted by ${guest.checkedInBy || 'Door Staff'} at ${guest.checkedInGate || 'Entrance'}.`,
+          reason: `SECURITY ALERT: Blocked re-scan attempt #${nextAttemptNum} at MUN Venue. Already inside since ${guest.checkedInTime ? new Date(guest.checkedInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'earlier'}. Person must leave before re-scanning.`,
         };
 
         const updatedLogs = [newLog, ...logs];
@@ -815,11 +1493,13 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return res;
       }
 
-      // Valid Ticket: First time scan
+      // If person previously left ('Left'), RE-ENTRY IS GRANTED!
+      const isReEntry = guest.status === 'Left';
+
       const updatedGuest: Guest = {
         ...guest,
         status: 'Checked-In',
-        scanCount: 1,
+        scanCount: (guest.scanCount || 0) + 1,
         deniedAttempts: [],
         checkedInTime: nowIso,
         checkedInBy: currentScannerName,
@@ -837,8 +1517,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         gate: currentGate,
         scannerName: currentScannerName,
         timestamp: nowIso,
-        type: 'CHECK_IN',
-        attemptCount: 1,
+        type: isReEntry ? 'RE_ENTRY' : 'CHECK_IN',
+        attemptCount: updatedGuest.scanCount,
+        reason: isReEntry ? 'Re-entry validated after departure from MUN Venue.' : 'Initial check-in.',
       };
 
       const updatedLogs = [newLog, ...logs];
@@ -849,10 +1530,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (settings.soundEnabled) playSuccessChime();
       if (settings.vibrationEnabled) vibrateSuccess();
 
-      // Gold confetti for VIP or Artist
       try {
         confetti({
-          particleCount: 55,
+          particleCount: 50,
           spread: 70,
           origin: { y: 0.6 },
           colors: ['#d4af37', '#f59e0b', '#fbbf24', '#ffffff'],
@@ -862,15 +1542,63 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       const res: ScanResult = {
-        type: 'SUCCESS',
+        type: isReEntry ? 'RE_ENTRY_SUCCESS' : 'SUCCESS',
         guest: updatedGuest,
         scannedCode: cleanCode,
         timestamp: nowIso,
-        message: 'Access Granted',
+        message: isReEntry
+          ? `Re-Entry Granted: Welcome back to MUN Venue, ${guest.name}!`
+          : `Access Granted: Welcome to MUN Venue, ${guest.name}!`,
       };
 
       setLastScanResult(res);
       return res;
+    },
+    [guests, logs, currentUser, settings, broadcastUpdate]
+  );
+
+  // Mark a person as 'Left' (allows re-scanning their QR code)
+  const markGuestLeft = useCallback(
+    (guestId: string): boolean => {
+      const idx = guests.findIndex((g) => g.id === guestId);
+      if (idx === -1) return false;
+      const guest = guests[idx];
+      if (guest.status !== 'Checked-In') return false;
+
+      const nowIso = new Date().toISOString();
+      const currentScannerName = currentUser
+        ? `${currentUser.name} (${ROLE_LABELS[currentUser.role]?.title || 'Security'})`
+        : 'Security Officer';
+
+      const updatedGuest: Guest = {
+        ...guest,
+        status: 'Left',
+        lastExitedTime: nowIso,
+        lastExitedBy: currentScannerName,
+      };
+
+      const updatedGuests = [...guests];
+      updatedGuests[idx] = updatedGuest;
+
+      const newLog: CheckInLogEntry = {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        ticketId: guest.ticketId,
+        guestName: guest.name,
+        category: guest.category,
+        gate: 'MUN Venue',
+        scannerName: currentScannerName,
+        timestamp: nowIso,
+        type: 'CHECK_OUT',
+        reason: 'Guest marked as Left MUN Venue. Unlocked for re-entry scan.',
+      };
+
+      const updatedLogs = [newLog, ...logs];
+      setGuests(updatedGuests);
+      setLogs(updatedLogs);
+      broadcastUpdate(updatedGuests, updatedLogs);
+
+      if (settings.soundEnabled) playSuccessChime();
+      return true;
     },
     [guests, logs, currentUser, settings, broadcastUpdate]
   );
@@ -883,17 +1611,17 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (guest.status === 'Checked-In') return false;
 
       const nowIso = new Date().toISOString();
-      const currentScannerName = currentUser ? `${currentUser.name} (Manual)` : 'Manual Entry';
-      const currentGate = currentUser ? currentUser.assignedGate : 'Gate';
+      const currentScannerName = currentUser ? `${currentUser.name} (Manual)` : 'Security (Manual)';
+      const isReEntry = guest.status === 'Left';
 
       const updatedGuest: Guest = {
         ...guest,
         status: 'Checked-In',
-        scanCount: 1,
+        scanCount: (guest.scanCount || 0) + 1,
         deniedAttempts: [],
         checkedInTime: nowIso,
         checkedInBy: currentScannerName,
-        checkedInGate: currentGate,
+        checkedInGate: 'MUN Venue',
       };
 
       const updatedGuests = [...guests];
@@ -904,11 +1632,12 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ticketId: guest.ticketId,
         guestName: guest.name,
         category: guest.category,
-        gate: currentGate,
+        gate: 'MUN Venue',
         scannerName: currentScannerName,
         timestamp: nowIso,
-        type: 'CHECK_IN',
-        attemptCount: 1,
+        type: isReEntry ? 'RE_ENTRY' : 'CHECK_IN',
+        attemptCount: updatedGuest.scanCount,
+        reason: isReEntry ? 'Manual re-entry check-in.' : 'Manual entry check-in.',
       };
 
       const updatedLogs = [newLog, ...logs];
@@ -928,11 +1657,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const idx = guests.findIndex((g) => g.id === guestId);
       if (idx === -1) return false;
       const guest = guests[idx];
-      if (guest.status !== 'Checked-In') return false;
 
       const nowIso = new Date().toISOString();
-      const currentScannerName = currentUser ? currentUser.name : 'Door Admin';
-      const currentGate = currentUser ? currentUser.assignedGate : 'Control Desk';
+      const currentScannerName = currentUser ? currentUser.name : 'Security Admin';
 
       const updatedGuest: Guest = {
         ...guest,
@@ -942,6 +1669,8 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         checkedInTime: null,
         checkedInBy: null,
         checkedInGate: null,
+        lastExitedTime: null,
+        lastExitedBy: null,
       };
 
       const updatedGuests = [...guests];
@@ -952,7 +1681,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ticketId: guest.ticketId,
         guestName: guest.name,
         category: guest.category,
-        gate: currentGate,
+        gate: 'MUN Venue',
         scannerName: currentScannerName,
         timestamp: nowIso,
         type: 'UNDO_CHECK_IN',
@@ -974,18 +1703,17 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!guest) return;
       const nowIso = new Date().toISOString();
       const currentScannerName = currentUser ? currentUser.name : 'Security Enforcement';
-      const currentGate = currentUser ? currentUser.assignedGate : 'Gate';
 
       const incidentLog: CheckInLogEntry = {
         id: `incident-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         ticketId: guest.ticketId,
         guestName: guest.name,
         category: guest.category,
-        gate: currentGate,
+        gate: 'MUN Venue',
         scannerName: currentScannerName,
         timestamp: nowIso,
         type: 'SECURITY_FLAG',
-        reason: reason || `Counterfeit or shared QR screenshot flagged for interception.`,
+        reason: reason || 'Counterfeit or shared QR screenshot flagged for interception.',
         attemptCount: guest.scanCount,
       };
 
@@ -1029,57 +1757,48 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const importGuests = useCallback(
-    (newGuestsList: Partial<Guest>[]): { added: number; updated: number } => {
+    (newGuests: Partial<Guest>[]): { added: number; updated: number } => {
       let added = 0;
       let updated = 0;
-      const currentList = [...guests];
+      const currentGuests = [...guests];
 
-      newGuestsList.forEach((incoming) => {
-        if (!incoming.ticketId) return;
-
-        const existingIdx = currentList.findIndex(
-          (g) => g.ticketId.toLowerCase() === (incoming.ticketId || '').toLowerCase()
+      newGuests.forEach((item) => {
+        if (!item.name || !item.ticketId) return;
+        const existingIdx = currentGuests.findIndex(
+          (g) => g.ticketId.toLowerCase() === item.ticketId!.toLowerCase()
         );
 
-        if (existingIdx !== -1) {
-          currentList[existingIdx] = {
-            ...currentList[existingIdx],
-            name: incoming.name || currentList[existingIdx].name,
-            category: incoming.category || currentList[existingIdx].category,
-            tableOrSeat: incoming.tableOrSeat || currentList[existingIdx].tableOrSeat,
-            notes: incoming.notes || currentList[existingIdx].notes,
-            status: incoming.status || currentList[existingIdx].status,
-            checkedInTime: incoming.checkedInTime || currentList[existingIdx].checkedInTime,
-            checkedInBy: incoming.checkedInBy || currentList[existingIdx].checkedInBy,
+        if (existingIdx >= 0) {
+          currentGuests[existingIdx] = {
+            ...currentGuests[existingIdx],
+            ...item,
           };
           updated++;
         } else {
-          currentList.push({
-            id: `g-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            name: incoming.name || 'Attendee',
-            ticketId: incoming.ticketId,
-            category: incoming.category || 'General Admission',
-            tableOrSeat: incoming.tableOrSeat,
-            notes: incoming.notes,
-            status: incoming.status || 'Pending',
-            scanCount: incoming.scanCount ?? (incoming.status === 'Checked-In' ? 1 : 0),
-            deniedAttempts: incoming.deniedAttempts || [],
-            checkedInTime: incoming.checkedInTime || null,
-            checkedInBy: incoming.checkedInBy || null,
+          currentGuests.push({
+            id: `g-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            name: item.name,
+            ticketId: item.ticketId,
+            category: item.category || 'General Admission',
+            tableOrSeat: item.tableOrSeat || 'MUN Venue',
+            notes: item.notes || '',
+            status: item.status || 'Pending',
+            scanCount: item.scanCount || 0,
+            deniedAttempts: [],
           });
           added++;
         }
       });
 
-      setGuests(currentList);
-      broadcastUpdate(currentList, logs);
+      setGuests(currentGuests);
+      broadcastUpdate(currentGuests, logs);
       return { added, updated };
     },
     [guests, logs, broadcastUpdate]
   );
 
   const resetAllCheckIns = useCallback(() => {
-    const updatedGuests = guests.map((g) => ({
+    const resetGuests = guests.map((g) => ({
       ...g,
       status: 'Pending' as const,
       scanCount: 0,
@@ -1087,56 +1806,45 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       checkedInTime: null,
       checkedInBy: null,
       checkedInGate: null,
+      lastExitedTime: null,
+      lastExitedBy: null,
     }));
-    setGuests(updatedGuests);
-    const resetLog: CheckInLogEntry = {
-      id: `log-${Date.now()}`,
-      ticketId: 'ALL',
-      guestName: 'All Attendees',
-      category: 'General Admission',
-      gate: currentUser ? currentUser.assignedGate : 'Executive Control',
-      scannerName: currentUser ? currentUser.name : 'Super Admin',
-      timestamp: new Date().toISOString(),
-      type: 'UNDO_CHECK_IN',
-      reason: 'Full venue manifest reset',
-    };
-    const updatedLogs = [resetLog, ...logs];
-    setLogs(updatedLogs);
-    broadcastUpdate(updatedGuests, updatedLogs);
-  }, [guests, logs, currentUser, broadcastUpdate]);
+    setGuests(resetGuests);
+    setLogs([]);
+    broadcastUpdate(resetGuests, []);
+  }, [guests, broadcastUpdate]);
 
   const loadSampleData = useCallback(() => {
     setGuests(INITIAL_GUESTS);
-    setStaffMembers(INITIAL_STAFF);
-    broadcastUpdate(INITIAL_GUESTS, logs);
-  }, [logs, broadcastUpdate]);
+    setLogs([]);
+    broadcastUpdate(INITIAL_GUESTS, []);
+  }, [broadcastUpdate]);
 
   const addStaffMember = useCallback((staffData: Omit<StaffMember, 'id'>): StaffMember => {
     const canScan = isScannerOrAdminRole(staffData.role);
     const accessPin = staffData.accessKey || String(Math.floor(1000 + Math.random() * 9000));
-    const generatedTicketId = staffData.ticketId || `WM-STAFF-${staffData.role.toUpperCase()}-${accessPin}`;
+    const ticketId = staffData.ticketId || `MUN-STAFF-${staffData.role.substring(0, 3).toUpperCase()}-${accessPin}`;
 
     const newStaff: StaffMember = {
       ...staffData,
       id: `staff-${Date.now()}`,
       accessKey: accessPin,
-      ticketId: generatedTicketId,
+      ticketId,
+      assignedGate: 'MUN Venue',
       canScan,
       canManualCheckIn: canScan,
       canRevokeCheckIn: canScan,
     };
-
     setStaffMembers((prev) => [...prev, newStaff]);
 
-    // Also register into guests manifest so Security can scan their pass
     setGuests((prev) => [
       ...prev,
       {
         id: `g-staff-${newStaff.id}`,
         name: newStaff.name,
-        ticketId: generatedTicketId,
+        ticketId,
         category: newStaff.role === 'media_and_press' ? 'Press' : 'Staff',
-        tableOrSeat: newStaff.assignedGate || 'Staff Operations',
+        tableOrSeat: 'MUN Venue',
         notes: `${ROLE_LABELS[newStaff.role]?.title || 'Staff'} Credential Pass`,
         status: 'Pending',
         scanCount: 0,
@@ -1166,8 +1874,10 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const stats = useMemo(() => {
     const totalGuests = guests.length;
+    // CheckedInCount reflects who is CURRENTLY INSIDE MUN Venue
     const checkedInCount = guests.filter((g) => g.status === 'Checked-In').length;
-    const pendingCount = totalGuests - checkedInCount;
+    const leftCount = guests.filter((g) => g.status === 'Left').length;
+    const pendingCount = guests.filter((g) => g.status === 'Pending').length;
     const capacity = settings.totalCapacity || 1200;
     const capacityRemaining = Math.max(0, capacity - checkedInCount);
     const capacityPercent = Math.min(100, Math.round((checkedInCount / capacity) * 100));
@@ -1180,6 +1890,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return {
       totalGuests,
       checkedInCount,
+      leftCount,
       pendingCount,
       capacityRemaining,
       capacityPercent,
@@ -1206,6 +1917,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         switchAccountFast,
         processScan,
+        markGuestLeft,
         manualCheckIn,
         undoCheckIn,
         flagSecurityIncident,

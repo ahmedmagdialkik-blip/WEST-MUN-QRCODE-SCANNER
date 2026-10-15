@@ -29,13 +29,18 @@ function MainVenueContent() {
   const [isTestBadgesOpen, setIsTestBadgesOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
+  // USER REQUIREMENT: You must login with an account beforehand!
+  if (!isAuthenticated || !currentUser) {
+    return <AuthModal />;
+  }
+
   // Security & Admins have the ability to scan and access management consoles.
   // Everyone else just has their official QR Pass Screen and cannot access other parts.
-  const isAuthorizedScanner = isScannerOrAdminRole(currentUser?.role);
+  const isAuthorizedScanner = isScannerOrAdminRole(currentUser.role);
 
   return (
     <div className="min-h-screen bg-black text-neutral-100 flex flex-col font-sans selection:bg-amber-400 selection:text-neutral-950">
-      {/* Black & Gold Header */}
+      {/* Black & Gold MUN Venue Header */}
       <Header
         onOpenTestBadges={() => setIsTestBadgesOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -44,7 +49,7 @@ function MainVenueContent() {
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-4xl mx-auto">
         {!isAuthorizedScanner ? (
-          /* Locked to Staff Pass Screen: They cannot access Scanner, Dashboard, Guest List, or Admin */
+          /* Locked to Staff Pass Screen: Non-security/admin cannot access Scanner, Dashboard, Guest List, or Admin */
           <StaffPassScreen />
         ) : (
           /* Authorized Security Officers & Admins: Full Scanner & Console Access */
@@ -74,8 +79,8 @@ function MainVenueContent() {
         onClose={() => setIsTestBadgesOpen(false)}
       />
 
-      {/* Account Authentication Modal (mandatory when signed out, or on demand) */}
-      {(!isAuthenticated || isAuthOpen) && <AuthModal />}
+      {/* Account Authentication Switcher Modal */}
+      {isAuthOpen && <AuthModal />}
     </div>
   );
 }

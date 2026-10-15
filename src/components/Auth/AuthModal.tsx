@@ -10,9 +10,9 @@ import {
   EyeOff,
   Sparkles,
   ArrowRight,
-  DoorOpen,
   CheckCircle2,
   KeyRound,
+  Building2,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
 
@@ -20,7 +20,7 @@ export const AuthModal: React.FC = () => {
   const { login, register, staffMembers, switchAccountFast } = useVenue();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
-  const [identifier, setIdentifier] = useState('admin@westmun.com');
+  const [identifier, setIdentifier] = useState('security@munvenue.org');
   const [password, setPassword] = useState('gold2026');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -29,8 +29,8 @@ export const AuthModal: React.FC = () => {
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState<StaffRole>('volunteers');
-  const [regGate, setRegGate] = useState('Main Entrance - Lane A');
+  const [regRole, setRegRole] = useState<StaffRole>('security');
+  const [regGate, setRegGate] = useState('MUN Venue');
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +56,7 @@ export const AuthModal: React.FC = () => {
       password: regPassword.trim(),
       role: regRole,
       accessKey: String(Math.floor(1000 + Math.random() * 9000)),
-      assignedGate: regGate.trim(),
+      assignedGate: 'MUN Venue',
       canScan,
       canManualCheckIn: canScan,
       canRevokeCheckIn: canScan,
@@ -77,8 +77,8 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-      <div className="w-full max-w-lg bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border border-amber-500/40 rounded-3xl shadow-[0_0_50px_rgba(212,175,55,0.18)] p-6 sm:p-8 text-white relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+      <div className="w-full max-w-lg bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border border-amber-500/40 rounded-3xl shadow-[0_0_60px_rgba(212,175,55,0.22)] p-6 sm:p-8 text-white relative overflow-hidden">
         {/* Gold Glow accents */}
         <div className="absolute top-0 right-1/4 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -86,17 +86,18 @@ export const AuthModal: React.FC = () => {
         {/* Branding */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-600 text-neutral-950 shadow-lg shadow-amber-500/25 mb-3">
-            <Sparkles className="w-7 h-7 fill-neutral-950" />
+            <Building2 className="w-7 h-7 stroke-[2.2]" />
           </div>
           <h1 className="text-2xl font-black tracking-wider bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent uppercase">
-            WEST MUN
+            MUN VENUE
           </h1>
           <p className="text-xs uppercase tracking-widest text-amber-400 font-semibold mt-0.5">
-            Venue Management & Access Portal
+            Event Access Control & Credential Portal
           </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Please sign in with your password to verify role authorization
-          </p>
+          <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 font-medium">
+            <Lock className="w-3 h-3 text-amber-400" />
+            <span>Please log in with an account beforehand</span>
+          </div>
         </div>
 
         {/* Sign In vs Register Tabs */}
@@ -151,7 +152,7 @@ export const AuthModal: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. admin@westmun.com or security@westmun.com"
+                  placeholder="e.g. security@munvenue.org or admin@munvenue.org"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-10 pr-3 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
@@ -189,7 +190,7 @@ export const AuthModal: React.FC = () => {
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:via-amber-400 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-amber-500/25 active:scale-95"
             >
               <KeyRound className="w-4 h-4" />
-              <span>Sign In to West Mun</span>
+              <span>Sign In to MUN Venue</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -218,7 +219,7 @@ export const AuthModal: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. jordan@westmun.com"
+                  placeholder="e.g. jordan@munvenue.org"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
@@ -241,7 +242,7 @@ export const AuthModal: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-amber-200/90 mb-1">
                   Select Department Role *
@@ -251,31 +252,35 @@ export const AuthModal: React.FC = () => {
                   onChange={(e) => setRegRole(e.target.value as StaffRole)}
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-2.5 py-2 text-xs text-amber-300 focus:outline-none focus:border-amber-400"
                 >
-                  <optgroup label="Door Scanning & Control (Can Scan)">
-                    <option value="security">Security (Camera Scanner & Enforcement)</option>
-                    <option value="super_admin">Super Admin (Camera Scanner & Master Admin)</option>
-                    <option value="ceremony_director">Ceremony Director (Camera Scanner & Leadership)</option>
+                  <optgroup label="Door Scanners (Security & IT Only)">
+                    <option value="security">Security (Active Camera Scanner & Door Access)</option>
+                    <option value="it">IT & Technical (Active Camera Scanner & Systems)</option>
+                    <option value="super_admin">Secretary General (Super Admin)</option>
                   </optgroup>
                   <optgroup label="Staff Pass Holders (Personal QR Pass Only)">
-                    <option value="volunteers">Volunteers (Staff QR Pass Screen)</option>
-                    <option value="media_and_press">Media & Press (Accreditation QR Pass Screen)</option>
-                    <option value="pr">Public Relations (VIP Liaison QR Pass Screen)</option>
-                    <option value="marketing">Marketing (Staff QR Pass Screen)</option>
-                    <option value="hr">HR (Staff QR Pass Screen)</option>
-                    <option value="secretary">Secretary (Staff QR Pass Screen)</option>
-                    <option value="doc_department">Doc Department (Staff QR Pass Screen)</option>
+                    <option value="executive">Executive Board & Leadership (Executive Pass)</option>
+                    <option value="secretary">Secretariat (Secretariat Pass)</option>
+                    <option value="marketing">Marketing (Marketing Pass)</option>
+                    <option value="designers">Design (Design Team Pass)</option>
+                    <option value="media_and_press">Media & Press (Press Pass)</option>
+                    <option value="volunteers">Volunteers (Staff Pass)</option>
+                    <option value="logistics">Logistics (Logistics Pass)</option>
+                    <option value="pr">Public Relations (VIP Liaison Pass)</option>
+                    <option value="hr">Human Resources (HR Pass)</option>
+                    <option value="ceremonies">Ceremonies (Ceremonies Pass)</option>
+                    <option value="dcc">DCC (DCC Pass)</option>
+                    <option value="doc_department">Documentation (Staff Pass)</option>
                   </optgroup>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Assigned Gate / Area</label>
+                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Venue Assignment</label>
                 <input
                   type="text"
-                  placeholder="e.g. VIP Entrance"
-                  value={regGate}
-                  onChange={(e) => setRegGate(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
+                  disabled
+                  value="MUN Venue"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-400 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -296,11 +301,11 @@ export const AuthModal: React.FC = () => {
               <Shield className="w-3.5 h-3.5" />
               <span>Instant 1-Click Role Login:</span>
             </span>
-            <span className="text-[9px] text-neutral-400">Security & Admins = Scanner</span>
+            <span className="text-[9px] text-amber-300 font-bold">Security & IT = Scanner</span>
           </div>
 
           <p className="text-[10px] text-neutral-400 mb-2">
-            Only <strong className="text-amber-300">Security & Admins</strong> can scan. All other roles display their personal scannable QR Pass.
+            Only <strong className="text-amber-300">Security & IT</strong> can scan QR codes. All other roles display their personal verified QR Pass.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 max-h-44 overflow-y-auto pr-1">

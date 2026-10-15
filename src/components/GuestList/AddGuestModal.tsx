@@ -13,6 +13,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
   const { addGuest } = useVenue();
 
   const [name, setName] = useState('');
+  const [role, setRole] = useState('');
   const [category, setCategory] = useState<TicketCategory>('General Admission');
   const [ticketId, setTicketId] = useState('');
   const [tableOrSeat, setTableOrSeat] = useState('');
@@ -21,7 +22,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const generateTicketId = (cat: TicketCategory) => {
-    const prefix = cat === 'VIP' ? 'WM-VIP' : cat === 'Artist' ? 'WM-ART' : cat === 'Press' ? 'WM-PRS' : 'WM-GA';
+    const prefix = cat === 'VIP' ? 'MUN-VIP' : cat === 'Artist' ? 'MUN-ART' : cat === 'Press' ? 'MUN-PRS' : 'MUN-GA';
     const rand = Math.floor(1000 + Math.random() * 9000);
     setTicketId(`${prefix}-${rand}`);
   };
@@ -32,7 +33,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
 
     let finalTicketId = ticketId.trim();
     if (!finalTicketId) {
-      const prefix = category === 'VIP' ? 'WM-VIP' : category === 'Artist' ? 'WM-ART' : 'WM-GA';
+      const prefix = category === 'VIP' ? 'MUN-VIP' : category === 'Artist' ? 'MUN-ART' : 'MUN-GA';
       finalTicketId = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
@@ -40,6 +41,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
       name: name.trim(),
       ticketId: finalTicketId,
       category,
+      role: role.trim() || undefined,
       tableOrSeat: tableOrSeat.trim() || undefined,
       notes: notes.trim() || undefined,
       status: 'Pending',
@@ -49,6 +51,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
     playClickSound();
     onClose();
     setName('');
+    setRole('');
     setTicketId('');
     setTableOrSeat('');
     setNotes('');
@@ -81,10 +84,23 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ isOpen, onClose })
             <input
               type="text"
               required
-              placeholder="e.g. Alexander Wright"
+              placeholder="e.g. Layan Ahmed, Karim, or GA Delegate"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-amber-200/90 mb-1">
+              Designated Role / Title (Written on Badge)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Lead Designer, Security Lead, IT Specialist, General Assembly Delegate"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-amber-300 placeholder-neutral-500 focus:outline-none focus:border-amber-400"
             />
           </div>
 

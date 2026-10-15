@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useVenue } from '../../context/VenueContext';
 import { ROLE_LABELS, isScannerOrAdminRole } from '../../types/venue';
-import { ScanFeedbackOverlay } from './ScanFeedbackOverlay';
 import {
   Camera,
   Flashlight,
@@ -15,9 +14,12 @@ import {
   Zap,
   CheckCircle2,
   XCircle,
-  Crown,
+  Building2,
   Shield,
   Lock,
+  LogIn,
+  LogOut,
+  UserCheck,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
 
@@ -35,6 +37,8 @@ export const ScannerView: React.FC = () => {
 
   const isAuthorized = isScannerOrAdminRole(currentUser?.role);
 
+  // Scan Mode: 'entry' (default admission check) or 'exit' (recording that someone leaves, unlocking them to re-scan)
+  const [scanMode, setScanMode] = useState<'entry' | 'exit'>('entry');
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
@@ -51,6 +55,7 @@ export const ScannerView: React.FC = () => {
   // If unauthorized user accesses scanner directly, show security block
   if (!isAuthorized) {
     const securityStaff = staffMembers.find((s) => s.role === 'security');
+    const itStaff = staffMembers.find((s) => s.role === 'it');
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 rounded-3xl bg-red-950/40 border border-red-500/40 flex items-center justify-center text-red-400 mb-4 shadow-xl">
@@ -58,16 +63,26 @@ export const ScannerView: React.FC = () => {
         </div>
         <h2 className="text-xl font-black text-white mb-2">Scanner Restricted</h2>
         <p className="text-xs text-neutral-300 max-w-sm mb-5 leading-relaxed">
-          Access control scanning is strictly reserved for <strong className="text-amber-300">Security Officers</strong> and <strong className="text-amber-300">Venue Admins</strong>. Your department is configured with a personal QR Pass.
+          Access control scanning is strictly reserved for members of <strong className="text-amber-300">Security</strong> and <strong className="text-amber-300">IT</strong>. Your department is equipped with your personal verified QR Pass.
         </p>
-        {securityStaff && (
-          <button
-            onClick={() => switchAccountFast(securityStaff.id)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20"
-          >
-            Switch to Security ({securityStaff.name})
-          </button>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {securityStaff && (
+            <button
+              onClick={() => switchAccountFast(securityStaff.id)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 cursor-pointer"
+            >
+              Switch to Security ({securityStaff.name.split(' ')[0]})
+            </button>
+          )}
+          {itStaff && (
+            <button
+              onClick={() => switchAccountFast(itStaff.id)}
+              className="px-4 py-2 rounded-xl bg-neutral-900 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer"
+            >
+              Switch to IT ({itStaff.name.split(' ')[0]})
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -113,34 +128,18 @@ export const ScannerView: React.FC = () => {
 
   const lastScannedCodeRef = useRef<{ code: string; time: number } | null>(null);
 
-  const handleDismissOverlay = () => {
-    clearLastScanResult();
-    try {
-      if (html5QrCodeRef.current && isScanning) {
-        const scannerInstance = html5QrCodeRef.current as unknown as { resume?: () => void };
-        if (typeof scannerInstance.resume === 'function') {
-          scannerInstance.resume();
-        }
-      }
-    } catch {
-      // ignore
-    }
-  };
-
   const handleScanSuccess = useCallback(
     (decodedText: string) => {
       const clean = (decodedText || '').trim();
       if (!clean) return;
 
-      // Guard: Do not process new scans while modal is displayed or already processing
       if (isProcessing || !!lastScanResult) return;
 
-      // Anti-Passback Hardware Debounce: Prevent rapid-fire re-triggers if camera is held over the same QR code
       const now = Date.now();
       if (
         lastScannedCodeRef.current &&
         lastScannedCodeRef.current.code.toLowerCase() === clean.toLowerCase() &&
-        now - lastScannedCodeRef.current.time < 3000
+        now - lastScannedCodeRef.current.time < 2500
       ) {
         return;
       }
@@ -159,13 +158,13 @@ export const ScannerView: React.FC = () => {
         // ignore
       }
 
-      processScan(clean);
+      processScan(clean, scanMode);
 
       setTimeout(() => {
         setIsProcessing(false);
       }, 1200);
     },
-    [isProcessing, lastScanResult, isScanning, processScan]
+    [isProcessing, lastScanResult, isScanning, processScan, scanMode]
   );
 
   const startCameraScanner = async (camId?: string) => {
@@ -218,15 +217,11 @@ export const ScannerView: React.FC = () => {
     try {
       const nextTorch = !isTorchOn;
       await html5QrCodeRef.current.applyVideoConstraints({
-        // @ts-expect-error torch is valid in video track constraints
-        advanced: [{ torch: nextTorch }],
+        advanced: [{ torch: nextTorch } as MediaTrackConstraintSet],
       });
       setIsTorchOn(nextTorch);
-      playClickSound();
     } catch (e) {
-      console.warn('Torch toggle failed', e);
-      setIsTorchOn(false);
-      setHasTorchCapability(false);
+      console.warn('Torch failed', e);
     }
   };
 
@@ -234,7 +229,7 @@ export const ScannerView: React.FC = () => {
     e.preventDefault();
     if (!manualCodeInput.trim()) return;
     playClickSound();
-    processScan(manualCodeInput.trim());
+    processScan(manualCodeInput.trim(), scanMode);
     setManualCodeInput('');
   };
 
@@ -243,57 +238,70 @@ export const ScannerView: React.FC = () => {
     if (!file) return;
 
     try {
-      const qrScanner = html5QrCodeRef.current || new Html5Qrcode('file-scanner-temp');
-      const result = await qrScanner.scanFile(file, true);
-      if (result) {
-        processScan(result);
-      }
+      const tempScanner = new Html5Qrcode('file-scan-temp');
+      const decodedResult = await tempScanner.scanFile(file, true);
+      tempScanner.clear();
+      processScan(decodedResult, scanMode);
     } catch {
-      processScan('UNREADABLE_IMAGE_QR');
+      processScan('INVALID_IMAGE_QR', scanMode);
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const canUserScan = currentUser?.canScan ?? true;
-
   return (
-    <div className="flex flex-col items-center justify-start min-h-[calc(100vh-8.5rem)] px-4 py-3 max-w-md mx-auto w-full select-none text-white">
-      {lastScanResult && (
-        <ScanFeedbackOverlay result={lastScanResult} onDismiss={handleDismissOverlay} />
-      )}
+    <div className="flex flex-col items-center px-4 py-4 max-w-lg mx-auto pb-24">
+      {/* Hidden container for image uploads */}
+      <div id="file-scan-temp" className="hidden"></div>
 
-      <div id="file-scanner-temp" className="hidden" />
+      {/* SCANNER MODE TOGGLE: Entrance vs Exit */}
+      <div className="w-full mb-3 bg-neutral-950 border border-amber-500/30 rounded-2xl p-1 flex shadow-lg">
+        <button
+          onClick={() => {
+            playClickSound();
+            setScanMode('entry');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            scanMode === 'entry'
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/25 ring-1 ring-emerald-400'
+              : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <LogIn className="w-3.5 h-3.5" />
+          <span>Entrance Mode (Scan In)</span>
+        </button>
 
-      {/* Strict Anti-Passback Security Badge */}
-      <div className="w-full mb-3 px-3.5 py-2 rounded-2xl bg-black border border-amber-500/40 shadow-sm flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-            Anti-Passback System Active
-          </span>
-        </div>
-        <span className="text-[10px] text-amber-400/80 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
-          Single-Use Enforced
-        </span>
+        <button
+          onClick={() => {
+            playClickSound();
+            setScanMode('exit');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            scanMode === 'exit'
+              ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-neutral-950 shadow-md shadow-amber-500/25 ring-1 ring-amber-400'
+              : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Exit Mode (Scan Out)</span>
+        </button>
       </div>
 
-      {/* Role Notice if role does not typically scan */}
-      {!canUserScan && (
-        <div className="w-full mb-3 p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between text-xs text-amber-200">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              Signed in as <strong>{currentUser?.name}</strong> ({currentUser?.role}).
-            </span>
-          </div>
-          <button
-            onClick={() => switchAccountFast('staff-vol-1')}
-            className="px-2 py-1 rounded-lg bg-amber-500 text-neutral-950 font-bold text-[10px] cursor-pointer"
-          >
-            Switch to Volunteer
-          </button>
+      {/* Mode Banner */}
+      <div className={`w-full mb-3 p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold ${
+        scanMode === 'entry'
+          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+          : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full animate-pulse ${
+            scanMode === 'entry' ? 'bg-emerald-400' : 'bg-amber-400'
+          }`} />
+          <span>
+            {scanMode === 'entry'
+              ? 'MUN Venue Entrance: Single-scan admittance. (Re-scan blocked unless person leaves).'
+              : 'MUN Venue Exit Gate: Scan departing person to unlock their QR code for re-entry.'}
+          </span>
         </div>
-      )}
+      </div>
 
       {/* Scanner Card in Black & Gold */}
       <div className="w-full bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border border-amber-500/40 rounded-3xl p-4 shadow-[0_4px_30px_rgba(212,175,55,0.12)] relative overflow-hidden">
@@ -302,8 +310,8 @@ export const ScannerView: React.FC = () => {
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></div>
             <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1">
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>West Mun Gold Access</span>
+              <Building2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>MUN Venue • {scanMode === 'entry' ? 'Entrance Scanner' : 'Exit Scanner'}</span>
             </span>
           </div>
 
@@ -343,8 +351,10 @@ export const ScannerView: React.FC = () => {
           </div>
         </div>
 
-        {/* Viewport Frame with Gold Border */}
-        <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black border-2 border-amber-500/40 shadow-inner flex items-center justify-center">
+        {/* Viewport Frame */}
+        <div className={`relative aspect-square w-full rounded-2xl overflow-hidden bg-black border-2 shadow-inner flex items-center justify-center ${
+          scanMode === 'entry' ? 'border-amber-500/40' : 'border-amber-400/80 ring-2 ring-amber-500/20'
+        }`}>
           <div id="reader-stream" className="w-full h-full object-cover"></div>
 
           {!isScanning && (
@@ -354,10 +364,10 @@ export const ScannerView: React.FC = () => {
               </div>
 
               <h3 className="text-base font-black text-amber-200 uppercase tracking-wide mb-1">
-                Gold Lens Ready
+                Camera Scanner Ready
               </h3>
               <p className="text-xs text-neutral-400 mb-5 max-w-[240px]">
-                High-speed rear camera QR scanner with instant audio chime validation
+                High-speed rear camera QR scanner for MUN Venue with instant validation
               </p>
 
               {cameraError && (
@@ -380,50 +390,35 @@ export const ScannerView: React.FC = () => {
             </div>
           )}
 
-          {/* Aim Reticle & Gold Laser */}
           {isScanning && (
-            <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
-              <div className="relative w-56 h-56">
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-amber-400 rounded-tl-lg shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-amber-400 rounded-tr-lg shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-amber-400 rounded-bl-lg shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-amber-400 rounded-br-lg shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
+            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+              <div className={`w-60 h-60 border-2 rounded-2xl relative shadow-[0_0_40px_rgba(212,175,55,0.2)] ${
+                scanMode === 'entry' ? 'border-amber-400/80' : 'border-amber-300 ring-2 ring-amber-400/50'
+              }`}>
+                {/* Corner markers */}
+                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-amber-300 rounded-tl-lg"></div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-amber-300 rounded-tr-lg"></div>
+                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-amber-300 rounded-bl-lg"></div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-amber-300 rounded-br-lg"></div>
 
-                <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_14px_#f59e0b] animate-laser"></div>
+                {/* Animated Scan Line */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-300 to-transparent animate-pulse shadow-[0_0_15px_#f59e0b]"></div>
               </div>
-
-              <div className="absolute bottom-3 text-center px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-[11px] font-mono font-bold text-amber-300 border border-amber-500/40">
-                Align QR Code in gold frame
-              </div>
+              <p className="mt-4 text-[11px] font-bold text-amber-300/90 tracking-wider uppercase bg-black/70 px-3 py-1 rounded-full border border-amber-500/30 backdrop-blur-sm">
+                {scanMode === 'entry' ? 'Align MUN Venue QR Code' : 'Align QR Code to Log Exit'}
+              </p>
             </div>
           )}
         </div>
 
-        {isScanning && (
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <button
-              onClick={() => {
-                playClickSound();
-                stopCameraScanner();
-              }}
-              className="py-1.5 px-3 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-300 text-xs font-semibold transition cursor-pointer"
-            >
-              Pause Camera
-            </button>
-            <div className="text-[11px] text-amber-400/90 font-mono">
-              Gate: <span className="text-white font-medium">{currentUser?.assignedGate || 'Door 1'}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Manual Barcode Input Fallback */}
+        {/* Manual Code Input Bar */}
         <div className="mt-4 pt-3 border-t border-neutral-800">
           <form onSubmit={handleManualSubmit} className="flex gap-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
               <input
                 type="text"
-                placeholder="Enter Ticket ID (e.g. WM-VIP-8891)..."
+                placeholder={scanMode === 'entry' ? 'Enter Ticket ID (e.g. MUN-VIP-8891)...' : 'Enter Ticket to Check Out...'}
                 value={manualCodeInput}
                 onChange={(e) => setManualCodeInput(e.target.value)}
                 className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
@@ -433,7 +428,7 @@ export const ScannerView: React.FC = () => {
               type="submit"
               className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold transition cursor-pointer active:scale-95 shrink-0"
             >
-              Verify
+              {scanMode === 'entry' ? 'Verify Entry' : 'Verify Exit'}
             </button>
           </form>
 
@@ -454,48 +449,52 @@ export const ScannerView: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Test Scenarios in Black & Gold */}
+      {/* Quick Test Scenarios */}
       <div className="w-full mt-4 bg-gradient-to-b from-neutral-950 to-neutral-900 border border-amber-500/30 rounded-2xl p-3.5 shadow-lg">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Instant Simulation Tests</span>
           </div>
-          <span className="text-[10px] text-neutral-400">Audio & Visual</span>
+          <span className="text-[10px] text-neutral-400 font-mono">Current Mode: {scanMode.toUpperCase()}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => {
               playClickSound();
-              processScan('WM-VIP-8891');
+              processScan('MUN-VIP-8891', scanMode);
             }}
             className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-amber-500/40 text-amber-300 text-[11px] font-bold flex flex-col items-center justify-center text-center transition cursor-pointer active:scale-95 shadow-sm shadow-amber-500/10"
           >
             <CheckCircle2 className="w-4 h-4 mb-1 text-amber-400" />
-            <span>Valid VIP</span>
+            <span>Scan Alexander</span>
+            <span className="text-[9px] text-neutral-500">(VIP-8891)</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              processScan('WM-VIP-8892');
+              // Test scanning Elena
+              processScan('MUN-GA-4412', scanMode);
             }}
-            className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-red-500/40 text-red-300 text-[11px] font-bold flex flex-col items-center justify-center text-center transition cursor-pointer active:scale-95 shadow-sm"
+            className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-amber-500/40 text-amber-300 text-[11px] font-bold flex flex-col items-center justify-center text-center transition cursor-pointer active:scale-95 shadow-sm"
           >
-            <AlertCircle className="w-4 h-4 mb-1 text-red-400" />
-            <span>Duplicate In</span>
+            <UserCheck className="w-4 h-4 mb-1 text-emerald-400" />
+            <span>Scan Elena</span>
+            <span className="text-[9px] text-neutral-500">(GA-4412)</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              processScan('WM-INVALID-999');
+              processScan('MUN-INVALID-999', scanMode);
             }}
             className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-rose-500/40 text-rose-300 text-[11px] font-bold flex flex-col items-center justify-center text-center transition cursor-pointer active:scale-95 shadow-sm"
           >
             <XCircle className="w-4 h-4 mb-1 text-rose-400" />
             <span>Invalid Pass</span>
+            <span className="text-[9px] text-neutral-500">(Fake Code)</span>
           </button>
         </div>
       </div>
@@ -507,12 +506,12 @@ export const ScannerView: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-red-500"></span>
             <span className="text-neutral-300 font-semibold">Blocked Re-Scans:</span>
             <span className="font-mono font-bold text-red-400">
-              {stats.recentCheckIns.filter((l) => l.type === 'DENIED_ATTEMPT').length} detected
+              {stats.recentCheckIns.filter((l) => l.type === 'DENIED_ATTEMPT').length} attempts
             </span>
           </div>
 
           <div className="flex items-center gap-1 text-[11px] text-amber-300 font-mono">
-            <span>Gate: {currentUser?.assignedGate.split(' ')[0] || 'Main'}</span>
+            <span>Location: MUN Venue</span>
           </div>
         </div>
       </div>
@@ -522,11 +521,11 @@ export const ScannerView: React.FC = () => {
         <div>
           Operator:{' '}
           <span className="text-amber-300 font-bold">
-            {currentUser ? ROLE_LABELS[currentUser.role]?.title : 'Staff'}
+            {currentUser ? `${currentUser.name} (${ROLE_LABELS[currentUser.role]?.title})` : 'Security'}
           </span>
         </div>
         <div>
-          Occupancy:{' '}
+          Currently Inside:{' '}
           <span className="text-amber-300 font-bold font-mono">
             {stats.checkedInCount} / {settings.totalCapacity}
           </span>

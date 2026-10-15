@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Guest } from '../../types/venue';
-import { X, Download, Crown, QrCode } from 'lucide-react';
+import { X, Download, Building2, QrCode } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
 
 interface TicketBadgeModalProps {
@@ -29,6 +29,7 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
   if (!guest) return null;
 
   const isCheckedIn = guest.status === 'Checked-In';
+  const isLeft = guest.status === 'Left';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -45,14 +46,21 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
 
         {/* Pass Header */}
         <div className="flex items-center justify-center gap-1.5 mb-1">
-          <Crown className="w-4 h-4 text-amber-400" />
-          <span className="text-xs font-black tracking-widest text-amber-300 uppercase">WEST MUN</span>
+          <Building2 className="w-4 h-4 text-amber-400" />
+          <span className="text-xs font-black tracking-widest text-amber-300 uppercase">MUN VENUE</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
-            GOLD PASS
+            OFFICIAL PASS
           </span>
         </div>
 
         <h3 className="text-xl font-black text-white mt-1">{guest.name}</h3>
+        {guest.role && (
+          <div className="mt-1">
+            <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50 inline-block">
+              Role: {guest.role}
+            </span>
+          </div>
+        )}
 
         <div className="mt-2 flex items-center justify-center gap-2">
           <span
@@ -68,14 +76,20 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
           </span>
 
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
               isCheckedIn
-                ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                : isLeft
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'bg-neutral-800 text-neutral-300 border border-neutral-700'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isCheckedIn ? 'bg-red-400' : 'bg-amber-400'}`}></span>
-            {guest.status}
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isCheckedIn ? 'bg-emerald-400' : isLeft ? 'bg-amber-400' : 'bg-neutral-500'
+              }`}
+            ></span>
+            {isCheckedIn ? 'Inside Venue' : isLeft ? 'Left Venue (Cleared)' : 'Pending'}
           </span>
         </div>
 
@@ -94,7 +108,7 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
 
         {guest.tableOrSeat && (
           <p className="text-xs text-neutral-300 mt-1">
-            Seating: <span className="font-bold text-amber-200">{guest.tableOrSeat}</span>
+            Location: <span className="font-bold text-amber-200">{guest.tableOrSeat}</span>
           </p>
         )}
 
@@ -102,7 +116,7 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
 
         {isCheckedIn && (
           <div className="mt-3 p-2 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-400">
-            Checked in by <span className="text-white font-medium">{guest.checkedInBy || 'Door Staff'}</span> at{' '}
+            Checked in by <span className="text-white font-medium">{guest.checkedInBy || 'Security'}</span> at{' '}
             <span className="text-white font-medium">
               {guest.checkedInTime
                 ? new Date(guest.checkedInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -111,11 +125,17 @@ export const TicketBadgeModal: React.FC<TicketBadgeModalProps> = ({ guest, onClo
           </div>
         )}
 
+        {isLeft && (
+          <div className="mt-3 p-2 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-amber-300">
+            Left MUN Venue • Unlocked for re-scan upon re-entry.
+          </div>
+        )}
+
         <div className="mt-5 flex items-center gap-2">
           {qrDataUrl && (
             <a
               href={qrDataUrl}
-              download={`WestMun-${guest.name.replace(/\s+/g, '_')}-${guest.ticketId}.png`}
+              download={`MUN_Venue-${guest.name.replace(/\s+/g, '_')}-${guest.ticketId}.png`}
               className="flex-1 py-2.5 px-4 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />

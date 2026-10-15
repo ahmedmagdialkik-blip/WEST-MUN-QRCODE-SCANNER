@@ -45,7 +45,7 @@ export const TeamManagementView: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('gold2026');
   const [role, setRole] = useState<StaffRole>('volunteers');
-  const [assignedGate, setAssignedGate] = useState('Main Entrance - Lane A');
+  const [assignedGate, setAssignedGate] = useState('MUN Venue');
   const [accessKey, setAccessKey] = useState(String(Math.floor(1000 + Math.random() * 9000)));
 
   // Venue Settings state
@@ -55,39 +55,57 @@ export const TeamManagementView: React.FC = () => {
   const [warningCapacity, setWarningCapacity] = useState(settings.warningCapacityPercentage);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
-  const canManageStaff =
-    currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'hr' ||
-    currentUser?.role === 'ceremony_director';
-
   const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isHR = currentUser?.role === 'hr';
+  const isSecurity = currentUser?.role === 'security';
+  const isIT = currentUser?.role === 'it';
+
+  // IT and Security have the ability to add members to their team; Super Admin & HR can add to all
+  const canAddStaff = isSuperAdmin || isHR || isSecurity || isIT;
 
   const togglePasswordVisibility = (id: string) => {
     playClickSound();
     setRevealedPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const openAddStaffModal = (defaultRole?: StaffRole) => {
+    playClickSound();
+    if (isIT) {
+      setRole('it');
+    } else if (isSecurity) {
+      setRole('security');
+    } else if (defaultRole) {
+      setRole(defaultRole);
+    } else {
+      setRole('security');
+    }
+    setAccessKey(String(Math.floor(1000 + Math.random() * 9000)));
+    setIsAddStaffOpen(true);
+  };
+
   const handleAddStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
-    const canScan = isScannerOrAdminRole(role);
+    // Enforce role boundaries for IT and Security
+    const assignedRole: StaffRole = isIT ? 'it' : isSecurity ? 'security' : role;
+    const canScan = isScannerOrAdminRole(assignedRole);
     const pin = accessKey.trim() || String(Math.floor(1000 + Math.random() * 9000));
-    const generatedTicketId = `WM-STAFF-${role.toUpperCase()}-${pin}`;
+    const generatedTicketId = `MUN-STAFF-${assignedRole.toUpperCase()}-${pin}`;
 
     addStaffMember({
       name: name.trim(),
       email: email.trim(),
       password: password.trim() || 'gold2026',
-      role,
+      role: assignedRole,
       accessKey: pin,
       ticketId: generatedTicketId,
-      assignedGate,
+      assignedGate: 'MUN Venue',
       canScan,
       canManualCheckIn: canScan,
       canRevokeCheckIn: canScan,
-      canManageStaff: ['super_admin', 'hr', 'ceremony_director'].includes(role),
-      canExportData: ['super_admin', 'marketing', 'secretary', 'doc_department', 'pr'].includes(role),
+      canManageStaff: ['super_admin', 'hr', 'security', 'it'].includes(assignedRole),
+      canExportData: ['super_admin', 'it', 'security', 'marketing', 'secretary', 'doc_department', 'pr'].includes(assignedRole),
       isActive: true,
       lastActiveTime: new Date().toISOString(),
     });
@@ -131,7 +149,18 @@ export const TeamManagementView: React.FC = () => {
                 <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
                   <UserPlus className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-amber-200">Add Staff Account</h3>
+                <div>
+                  <h3 className="text-base font-bold text-amber-200">
+                    {isIT ? 'Add IT Team Member' : isSecurity ? 'Add Security Member' : 'Add Staff Member'}
+                  </h3>
+                  <p className="text-[11px] text-neutral-400">
+                    {isIT
+                      ? 'Provision scanner credentials for a new IT team member'
+                      : isSecurity
+                      ? 'Provision scanner credentials for a new Security officer'
+                      : 'Create staff credentials and official venue pass'}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsAddStaffOpen(false)}
@@ -143,11 +172,11 @@ export const TeamManagementView: React.FC = () => {
 
             <form onSubmit={handleAddStaff} className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Staff Member Name *</label>
+                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Liam Walker"
+                  placeholder={isIT ? 'e.g. Youssef IT' : isSecurity ? 'e.g. Mostafa Security' : 'e.g. Layan Ahmed'}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
@@ -159,7 +188,7 @@ export const TeamManagementView: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. liam@westmun.com"
+                  placeholder={isIT ? 'e.g. youssef.it@munvenue.org' : isSecurity ? 'e.g. mostafa.sec@munvenue.org' : 'e.g. staff@munvenue.org'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
@@ -181,26 +210,41 @@ export const TeamManagementView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-amber-200/90 mb-1">Department Role</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as StaffRole)}
-                    className="w-full bg-black border border-neutral-800 rounded-xl px-2.5 py-2 text-xs text-amber-300 focus:outline-none focus:border-amber-400"
-                  >
-                    <optgroup label="Door Scanners (Security & Admins)">
-                      <option value="security">Security (Active Camera Scanner)</option>
-                      <option value="super_admin">Super Admin (Active Camera Scanner)</option>
-                      <option value="ceremony_director">Ceremony Director (Active Camera Scanner)</option>
-                    </optgroup>
-                    <optgroup label="Pass Holders (Personal QR Pass Screen)">
-                      <option value="volunteers">Volunteers (Staff QR Pass)</option>
-                      <option value="media_and_press">Media & Press (Press QR Pass)</option>
-                      <option value="pr">Public Relations (VIP Liaison QR Pass)</option>
-                      <option value="marketing">Marketing (Staff QR Pass)</option>
-                      <option value="hr">HR (Staff QR Pass)</option>
-                      <option value="secretary">Secretary (Staff QR Pass)</option>
-                      <option value="doc_department">Doc Department (Staff QR Pass)</option>
-                    </optgroup>
-                  </select>
+                  {isIT ? (
+                    <div className="w-full bg-neutral-900 border border-amber-500/40 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold">
+                      IT & Technical (Scanner)
+                    </div>
+                  ) : isSecurity ? (
+                    <div className="w-full bg-neutral-900 border border-amber-500/40 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold">
+                      Security (Scanner & Door)
+                    </div>
+                  ) : (
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as StaffRole)}
+                      className="w-full bg-black border border-neutral-800 rounded-xl px-2.5 py-2 text-xs text-amber-300 focus:outline-none focus:border-amber-400"
+                    >
+                      <optgroup label="Door Scanners (Security & IT Only)">
+                        <option value="security">Security (Scanner & Door Access)</option>
+                        <option value="it">IT & Technical (Scanner & Controls)</option>
+                        <option value="super_admin">Secretary General (Super Admin)</option>
+                      </optgroup>
+                      <optgroup label="Pass Holders (Personal QR Pass Screen)">
+                        <option value="executive">Executive Board & Leadership (Executive Pass)</option>
+                        <option value="secretary">Secretariat (Secretariat Pass)</option>
+                        <option value="marketing">Marketing (Marketing Pass)</option>
+                        <option value="designers">Design (Design Team Pass)</option>
+                        <option value="media_and_press">Media & Press (Press Pass)</option>
+                        <option value="volunteers">Volunteers (Staff Pass)</option>
+                        <option value="logistics">Logistics (Logistics Pass)</option>
+                        <option value="pr">Public Relations (VIP Liaison Pass)</option>
+                        <option value="hr">Human Resources (HR Pass)</option>
+                        <option value="ceremonies">Ceremonies (Ceremonies Pass)</option>
+                        <option value="dcc">DCC (DCC Pass)</option>
+                        <option value="doc_department">Documentation (Staff Pass)</option>
+                      </optgroup>
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -217,10 +261,10 @@ export const TeamManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Assigned Gate / Location</label>
+                <label className="block text-xs font-semibold text-amber-200/90 mb-1">Venue Gate Assignment</label>
                 <input
                   type="text"
-                  placeholder="e.g. VIP Gold Gate, Media Pit, Main Entrance"
+                  placeholder="MUN Venue"
                   value={assignedGate}
                   onChange={(e) => setAssignedGate(e.target.value)}
                   className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
@@ -231,15 +275,15 @@ export const TeamManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddStaffOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 text-neutral-300 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-neutral-800 text-neutral-300 text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 text-xs font-black uppercase tracking-wider"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 text-xs font-black uppercase tracking-wider cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95"
                 >
-                  Create Staff Account
+                  {isIT ? 'Add to IT Team' : isSecurity ? 'Add to Security Team' : 'Create Staff Account'}
                 </button>
               </div>
             </form>
@@ -247,33 +291,77 @@ export const TeamManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* Top Header & Deployment Button */}
+      {/* Top Header & Role Information */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Crown className="w-5 h-5 text-amber-400" />
             <h1 className="text-xl font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-              West Mun Staff Accounts & Roles
+              MUN Venue Staff & Team Management
             </h1>
           </div>
           <p className="text-xs text-neutral-400">
-            Password accounts, 10 venue departments, gate assignments, and security governance
+            Only <strong className="text-amber-300 font-semibold">Security and IT</strong> are authorized to scan. IT and Security can add members to their team.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            playClickSound();
-            setIsDeployGuideOpen(true);
-          }}
-          className="px-3.5 py-2 rounded-xl bg-neutral-900 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer self-start sm:self-center active:scale-95 shadow-md shadow-amber-500/10"
-        >
-          <Cloud className="w-4 h-4 text-amber-400" />
-          <span>Deployment & Schemas</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {canAddStaff && (
+            <button
+              onClick={() => openAddStaffModal()}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/20"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>{isIT ? '+ Add IT Member' : isSecurity ? '+ Add Security Member' : '+ Add Staff'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              playClickSound();
+              setIsDeployGuideOpen(true);
+            }}
+            className="px-3 py-2 rounded-xl bg-neutral-900 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/10"
+          >
+            <Cloud className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Deployment</span>
+          </button>
+        </div>
       </div>
 
-      {/* Section 1: Staff & 10 Role Directory */}
+      {/* Dedicated Team Card for IT / Security / Admin */}
+      {(isIT || isSecurity) && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-neutral-950 to-neutral-900 border border-amber-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-amber-200">
+                  {isIT ? 'IT & Technical Team Portal' : 'Security Door Access Portal'}
+                </span>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  SCANNER & TEAM MGMT
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 mt-0.5">
+                You have active door camera scanner rights and the ability to add fellow members to the{' '}
+                <strong className="text-amber-300 font-bold">{isIT ? 'IT' : 'Security'}</strong> team.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => openAddStaffModal(isIT ? 'it' : 'security')}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-md shrink-0 active:scale-95"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Add Member to {isIT ? 'IT' : 'Security'} Team</span>
+          </button>
+        </div>
+      )}
+
+      {/* Section 1: Staff & Department Directory */}
       <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -281,48 +369,55 @@ export const TeamManagementView: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-amber-200">Department Roster & Passwords</h2>
-              <p className="text-[11px] text-neutral-400">Manage all 10 roles and password authorizations</p>
+              <h2 className="text-sm font-bold text-amber-200">Department Roster & Credentials</h2>
+              <p className="text-[11px] text-neutral-400">
+                Official staff accounts with designated roles written for each member
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {canManageStaff && (
-              <button
-                onClick={() => {
-                  playClickSound();
-                  setIsAddStaffOpen(true);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/20"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Add Member</span>
-              </button>
-            )}
+            <span className="text-[11px] font-mono text-amber-400 bg-black px-2.5 py-1 rounded-lg border border-neutral-800">
+              Total Staff: {staffMembers.length}
+            </span>
           </div>
         </div>
 
         {/* Role Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 pt-1">
-          <span className="text-[10px] text-amber-400/80 uppercase font-bold mr-1">Role:</span>
-          {['all', 'volunteers', 'security', 'media_and_press', 'marketing', 'hr', 'ceremony_director', 'pr', 'secretary', 'doc_department', 'super_admin'].map(
-            (r) => (
-              <button
-                key={r}
-                onClick={() => {
-                  playClickSound();
-                  setRoleFilter(r);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize whitespace-nowrap transition cursor-pointer ${
-                  roleFilter === r
-                    ? 'bg-amber-500 text-neutral-950 font-bold'
-                    : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
-                }`}
-              >
-                {r.replace(/_/g, ' ')}
-              </button>
-            )
-          )}
+          <span className="text-[10px] text-amber-400/80 uppercase font-bold mr-1">Filter:</span>
+          {[
+            'all',
+            'it',
+            'security',
+            'super_admin',
+            'executive',
+            'secretary',
+            'marketing',
+            'designers',
+            'media_and_press',
+            'volunteers',
+            'logistics',
+            'pr',
+            'hr',
+            'ceremonies',
+            'dcc',
+          ].map((r) => (
+            <button
+              key={r}
+              onClick={() => {
+                playClickSound();
+                setRoleFilter(r);
+              }}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize whitespace-nowrap transition cursor-pointer ${
+                roleFilter === r
+                  ? 'bg-amber-500 text-neutral-950 font-bold shadow-md shadow-amber-500/20'
+                  : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+              }`}
+            >
+              {r === 'all' ? 'All Roles' : r === 'it' ? 'IT' : r.replace(/_/g, ' ')}
+            </button>
+          ))}
         </div>
 
         {/* Staff Table / Cards */}
@@ -330,6 +425,16 @@ export const TeamManagementView: React.FC = () => {
           {filteredStaff.map((staff) => {
             const roleMeta = ROLE_LABELS[staff.role];
             const isRevealed = revealedPasswords[staff.id];
+            const canScan = staff.canScan;
+
+            // IT members can remove IT members (except themselves)
+            // Security members can remove Security members (except themselves)
+            // Super Admin can remove anyone (except themselves)
+            const canRemove =
+              staff.id !== currentUser?.id &&
+              (isSuperAdmin ||
+                (isIT && staff.role === 'it') ||
+                (isSecurity && staff.role === 'security'));
 
             return (
               <div
@@ -347,14 +452,23 @@ export const TeamManagementView: React.FC = () => {
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
                         {roleMeta?.title || staff.role}
                       </span>
+                      {canScan ? (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Scanner Active
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400">
+                          Pass Only
+                        </span>
+                      )}
                       {staff.id === currentUser?.id && (
                         <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-500 text-neutral-950">
-                          Active Account
+                          You
                         </span>
                       )}
                     </div>
 
-                    <p className="text-xs text-neutral-400 mt-1 flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-neutral-400 mt-1.5 flex items-center gap-2 flex-wrap">
                       <span>{staff.email}</span>
                       <span>•</span>
                       {/* Password reveal */}
@@ -364,13 +478,15 @@ export const TeamManagementView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => togglePasswordVisibility(staff.id)}
-                          className="ml-1 text-neutral-400 hover:text-amber-400"
+                          className="ml-1 text-neutral-400 hover:text-amber-400 cursor-pointer"
                         >
                           {isRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                         </button>
                       </span>
                       <span>•</span>
                       <span className="text-neutral-300 font-mono">PIN: {staff.accessKey}</span>
+                      <span>•</span>
+                      <span className="text-amber-400/90 font-mono text-[11px]">{staff.ticketId}</span>
                     </p>
 
                     <p className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1">
@@ -380,32 +496,26 @@ export const TeamManagementView: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    {/* Scan permission toggle */}
-                    <button
-                      disabled={!canManageStaff || staff.role === 'super_admin'}
-                      onClick={() => {
-                        playClickSound();
-                        updateStaffMember(staff.id, { canScan: !staff.canScan });
-                      }}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                        staff.canScan
+                    {/* Scan status indicator */}
+                    <div
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
+                        canScan
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                           : 'bg-neutral-900 text-neutral-500 border border-neutral-800'
                       }`}
-                      title="Toggle scanning authorization"
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${staff.canScan ? 'bg-amber-400' : 'bg-neutral-600'}`} />
-                      <span>Scan: {staff.canScan ? 'Authorized' : 'Disabled'}</span>
-                    </button>
+                      <span className={`w-1.5 h-1.5 rounded-full ${canScan ? 'bg-amber-400' : 'bg-neutral-600'}`} />
+                      <span>{canScan ? 'Can Scan' : 'Pass Holder'}</span>
+                    </div>
 
-                    {isSuperAdmin && staff.id !== currentUser?.id && staffMembers.length > 1 && (
+                    {canRemove && (
                       <button
                         onClick={() => {
                           playClickSound();
                           removeStaffMember(staff.id);
                         }}
                         className="p-1.5 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-950/40 transition cursor-pointer"
-                        title="Remove Staff Member"
+                        title="Remove Team Member"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

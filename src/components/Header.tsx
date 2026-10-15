@@ -59,14 +59,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTestBadges, onOpenAuth }) 
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-black text-base tracking-wider bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent truncate">
-                WEST MUN
+                MUN VENUE
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
                 {isAuthorizedScanner ? 'DOOR OPS' : 'STAFF PASS'}
               </span>
             </div>
             <p className="text-[11px] text-neutral-400 truncate flex items-center gap-1 font-medium">
-              <span className="text-amber-300/80">{currentUser?.assignedGate || 'West Mun Grand Venue'}</span>
+              <span className="text-amber-300/80">{currentUser?.assignedGate || 'MUN Venue'}</span>
             </p>
           </div>
         </div>
