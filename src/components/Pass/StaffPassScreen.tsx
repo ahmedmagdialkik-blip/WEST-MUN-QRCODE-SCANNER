@@ -5,27 +5,23 @@ import { ROLE_LABELS } from '../../types/venue';
 import {
   Shield,
   ShieldCheck,
-  ShieldAlert,
   Building2,
-  Clock,
-  Sparkles,
   MapPin,
   CheckCircle2,
   Copy,
   Check,
   LogOut,
-  Zap,
   Lock,
   RefreshCw,
-  LogIn,
+  Crown,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
+import officialLogoUrl from '../../assets/images/west_mun_logo_official.jpg';
 
 export const StaffPassScreen: React.FC = () => {
   const {
     currentUser,
     guests,
-    processScan,
     logout,
     switchAccountFast,
     staffMembers,
@@ -33,17 +29,14 @@ export const StaffPassScreen: React.FC = () => {
 
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [liveTime, setLiveTime] = useState<string>('');
 
   const roleMeta = currentUser ? ROLE_LABELS[currentUser.role] : null;
 
-  // The staff ticket code to be encoded in the QR code
   const staffTicketCode =
     currentUser?.ticketId ||
     `MUN-STAFF-${currentUser?.role.toUpperCase()}-${currentUser?.accessKey || '0000'}`;
 
-  // Find if this staff ticket is already registered / scanned in the venue manifest
   const guestRecord = guests.find(
     (g) => g.ticketId.toLowerCase() === staffTicketCode.toLowerCase()
   );
@@ -51,7 +44,6 @@ export const StaffPassScreen: React.FC = () => {
   const isCheckedIn = guestRecord?.status === 'Checked-In';
   const hasLeft = guestRecord?.status === 'Left';
 
-  // Update real-time clock every second for dynamic anti-counterfeiting
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -68,14 +60,13 @@ export const StaffPassScreen: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Generate crisp, high-contrast QR code
   useEffect(() => {
     let isMounted = true;
     QRCode.toDataURL(staffTicketCode, {
       width: 400,
       margin: 2,
       color: {
-        dark: '#050505',
+        dark: '#120f0d',
         light: '#FFFFFF',
       },
       errorCorrectionLevel: 'H',
@@ -99,61 +90,53 @@ export const StaffPassScreen: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Simulate Security scanning this pass at Entrance (Entry Mode)
-  const handleSimulateEntryScan = () => {
-    playClickSound();
-    setSimulating(true);
-    setTimeout(() => {
-      processScan(staffTicketCode, 'entry');
-      setSimulating(false);
-    }, 300);
-  };
-
-  // Simulate Security scanning this pass at Exit (Exit Mode / Leave)
-  const handleSimulateExitScan = () => {
-    playClickSound();
-    setSimulating(true);
-    setTimeout(() => {
-      processScan(staffTicketCode, 'exit');
-      setSimulating(false);
-    }, 300);
-  };
-
-  const securityStaff = staffMembers.find((s) => s.role === 'security');
-  const itStaff = staffMembers.find((s) => s.role === 'it');
-  const adminStaff = staffMembers.find((s) => s.role === 'super_admin');
-
   return (
-    <div className="min-h-[calc(100vh-65px)] bg-black px-4 py-5 flex flex-col items-center justify-start pb-20 select-none">
+    <div className="min-h-[calc(100vh-65px)] px-3 sm:px-4 py-5 flex flex-col items-center justify-start pb-20 select-none text-[#F5F2EA]">
       {/* Top Security Restriction Banner */}
-      <div className="w-full max-w-sm mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 shadow-lg shadow-black">
-        <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-left text-xs leading-relaxed">
-          <span className="font-bold text-amber-300 block">Personal Credential Mode</span>
+      <div className="w-full max-w-sm mb-4 p-3 bg-[#161210] border border-[#B08D57]/40 flex items-start gap-2.5 shadow-md">
+        <Lock className="w-4 h-4 text-[#B08D57] shrink-0 mt-0.5" />
+        <div className="text-left text-xs leading-relaxed font-serif">
+          <span
+            className="font-bold text-[#F5F2EA] block"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Diplomatic Credential Pass
+          </span>
           <span className="text-neutral-300 text-[11px]">
-            Your account ({roleMeta?.title}) displays your verified QR Pass for MUN Venue access. Camera scanner tools are strictly reserved for{' '}
-            <strong className="text-amber-300 font-semibold">Security & IT</strong>.
+            Your account ({roleMeta?.title}) provides entrance clearance. Scanner consoles are restricted to{' '}
+            <strong className="text-[#B08D57]">Security & IT Administrators</strong>.
           </span>
         </div>
       </div>
 
-      {/* Main Luxury Black & Gold Staff Badge Card */}
-      <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border-2 border-amber-500/40 p-5 shadow-[0_0_50px_rgba(212,175,55,0.22)] relative overflow-hidden text-center text-white">
-        {/* Subtle Ambient Gold Gradients */}
-        <div className="absolute top-0 -left-10 w-40 h-40 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 -right-10 w-40 h-40 bg-yellow-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Main Handcrafted Staff Badge Card */}
+      <div className="w-full max-w-sm bg-[#161311] border border-[#B08D57]/70 p-5 shadow-2xl relative text-center">
+        {/* Medieval Corner Accents */}
+        <div className="absolute top-1.5 left-1.5 w-3 h-3 border-t border-l border-[#B08D57]/70" />
+        <div className="absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-[#B08D57]/70" />
+        <div className="absolute bottom-1.5 left-1.5 w-3 h-3 border-b border-l border-[#B08D57]/70" />
+        <div className="absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-[#B08D57]/70" />
 
-        {/* Dynamic Holographic Watermark Bar */}
-        <div className="flex items-center justify-between pb-3 border-b border-amber-500/25 mb-4">
+        {/* Live Watermark Bar */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#B08D57]/20 mb-4">
           <div className="flex items-center gap-1.5">
-            <Building2 className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 uppercase">
-              MUN VENUE
+            <div className="w-5 h-5 rounded-sm overflow-hidden border border-[#B08D57]/40">
+              <img
+                src={officialLogoUrl}
+                alt="West MUN"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span
+              className="text-xs font-bold tracking-widest text-[#B08D57] uppercase font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              WEST MUN
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-950 border border-amber-500/30">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-mono text-amber-300 font-semibold">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#0f0c0a] border border-[#B08D57]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] font-mono text-[#D4AF37] font-semibold">
               LIVE {liveTime}
             </span>
           </div>
@@ -161,248 +144,82 @@ export const StaffPassScreen: React.FC = () => {
 
         {/* Staff Identity Header */}
         <div className="flex flex-col items-center mb-4">
-          <div className="relative mb-2">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-500 to-amber-600 p-[2px] shadow-lg shadow-amber-500/25">
-              <div className="w-full h-full bg-neutral-950 rounded-[14px] flex items-center justify-center">
-                <span className="text-2xl font-black bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent">
-                  {currentUser?.name?.charAt(0) || 'S'}
-                </span>
-              </div>
-            </div>
-            <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-black border border-amber-400/50">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            </div>
-          </div>
-
-          <h2 className="text-xl font-black tracking-tight text-white mb-0.5">
-            {currentUser?.name}
-          </h2>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold mt-0.5">
-            <Shield className="w-3 h-3 text-amber-400" />
-            <span>{roleMeta?.title}</span>
-            <span className="text-amber-500">•</span>
-            <span className="text-[10px] font-normal uppercase tracking-wider text-amber-400/90">
-              {roleMeta?.badge}
+          <div className="w-14 h-14 rounded-full bg-[#201813] border border-[#B08D57] flex items-center justify-center mb-2 shadow-sm">
+            <span
+              className="text-xl font-bold text-[#F5F2EA] font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              {currentUser?.name?.charAt(0) || 'D'}
             </span>
           </div>
 
-          <p className="text-[11px] text-neutral-400 flex items-center gap-1 mt-1 font-medium">
-            <MapPin className="w-3 h-3 text-amber-400" />
-            <span>MUN Venue</span>
-          </p>
+          <h2
+            className="text-lg font-bold tracking-wide text-[#F5F2EA] font-serif mb-0.5"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            {currentUser?.name}
+          </h2>
+
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#201814] border border-[#B08D57]/40 text-[#B08D57] text-xs font-serif mt-0.5">
+            <Shield className="w-3 h-3 text-[#B08D57]" />
+            <span>{roleMeta?.title}</span>
+            <span>•</span>
+            <span className="text-[10px] font-mono">{roleMeta?.badge}</span>
+          </div>
         </div>
 
         {/* QR Code Presentation Box */}
-        <div className="relative mx-auto bg-white p-3.5 rounded-2xl border-4 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] w-[230px] h-[230px] flex items-center justify-center transition-transform hover:scale-105 duration-200">
+        <div className="relative mx-auto bg-white p-3 rounded-none border-2 border-[#B08D57] shadow-lg w-[200px] h-[200px] flex items-center justify-center">
           {qrDataUrl ? (
             <img
               src={qrDataUrl}
-              alt="Official MUN Venue Access QR Code"
+              alt="Official Access QR Code"
               className="w-full h-full object-contain"
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-neutral-800">
-              <RefreshCw className="w-8 h-8 animate-spin text-amber-500 mb-1" />
-              <span className="text-xs font-semibold">Generating QR...</span>
+              <RefreshCw className="w-6 h-6 animate-spin text-[#B08D57] mb-1" />
+              <span className="text-xs font-serif">Generating Pass...</span>
             </div>
           )}
         </div>
 
         {/* Ticket ID & Copy Action */}
         <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="font-mono text-xs font-bold text-amber-300 bg-neutral-900 px-3 py-1 rounded-xl border border-amber-500/30">
+          <span className="font-mono text-xs font-bold text-[#D4AF37] bg-[#0d0a08] px-3 py-1 border border-[#B08D57]/40">
             {staffTicketCode}
           </span>
           <button
             onClick={copyCode}
-            className="p-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-amber-500/30 text-amber-400 hover:text-white transition cursor-pointer"
-            title="Copy QR Code value"
+            className="p-1.5 bg-[#181310] hover:bg-[#251e19] border border-[#B08D57]/40 text-[#B08D57] transition cursor-pointer"
+            title="Copy Pass Code"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        {/* Live Admission Status Badge */}
-        <div className="mt-4 pt-3 border-t border-neutral-800">
-          {isCheckedIn ? (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-neutral-950 border border-emerald-500/50 text-left">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                  Admitted • Inside MUN Venue
-                </span>
-                <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Active
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-300 pl-6">
-                Checked in at{' '}
-                <strong className="text-white">
-                  {guestRecord.checkedInTime
-                    ? new Date(guestRecord.checkedInTime).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : 'Entrance'}
-                </strong>{' '}
-                by <span className="text-amber-300">{guestRecord.checkedInBy || 'Security'}</span>
-              </p>
-              <p className="text-[10px] text-amber-300 pl-6 mt-1 flex items-center gap-1 font-mono">
-                <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>Locked: Re-scanning blocked while inside. (Unlock by scanning out).</span>
-              </p>
-            </div>
-          ) : hasLeft ? (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-950/50 to-neutral-950 border border-amber-500/50 text-left">
-              <div className="flex items-center gap-2 mb-1">
-                <LogOut className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-                  Departed • Outside Venue
-                </span>
-                <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Eligible Re-Scan
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-300 pl-6">
-                You have left MUN Venue. Your QR code is cleared to re-scan for re-entry upon return.
-              </p>
-            </div>
-          ) : (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 border border-neutral-700 text-left">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-                  Awaiting Entrance Scan
-                </span>
-              </div>
-              <p className="text-[11px] text-neutral-300 pl-4 leading-snug">
-                Present this screen to <strong className="text-amber-200">Security</strong> at the MUN Venue entrance.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Verification Policy Notice */}
-        <div className="mt-3 text-[10px] text-neutral-400 flex items-center justify-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-amber-400/70" />
-          <span>MUN Venue Single-Scan Policy (Unlocked upon Departure)</span>
-        </div>
-      </div>
-
-      {/* Interactive Testing & Re-Scan Simulation Controls */}
-      <div className="w-full max-w-sm mt-5 space-y-2.5">
-        <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider text-center flex items-center justify-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Test Entry / Exit Lifecycle</span>
-        </div>
-
-        {/* Flow button based on state */}
-        {!isCheckedIn ? (
-          <button
-            onClick={handleSimulateEntryScan}
-            disabled={simulating}
-            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95"
+        {/* Current Door Status */}
+        <div className="mt-4 pt-3 border-t border-[#B08D57]/20 flex items-center justify-between text-xs font-serif">
+          <span className="text-neutral-400">Current Status:</span>
+          <span
+            className={`font-semibold flex items-center gap-1.5 ${
+              isCheckedIn ? 'text-emerald-400' : hasLeft ? 'text-amber-400' : 'text-[#B08D57]'
+            }`}
           >
-            <LogIn className="w-4 h-4" />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isCheckedIn ? 'bg-emerald-400' : hasLeft ? 'bg-amber-400' : 'bg-neutral-500'
+              }`}
+            />
             <span>
-              {hasLeft
-                ? 'Simulate Security Scanning My Re-Entry Pass'
-                : 'Simulate Security Scanning My Pass (Enter Venue)'}
+              {isCheckedIn
+                ? 'Inside Venue (Validated)'
+                : hasLeft
+                ? 'Departed (Re-entry Allowed)'
+                : 'Pending Entrance Scan'}
             </span>
-          </button>
-        ) : (
-          <div className="space-y-2">
-            {/* Try scanning again while already inside -> triggers anti-passback */}
-            <button
-              onClick={handleSimulateEntryScan}
-              disabled={simulating}
-              className="w-full py-2 px-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-500/50 text-red-200 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-95"
-            >
-              <Zap className="w-4 h-4 text-red-400" />
-              <span>Test Re-Scan While Inside (Triggers Re-Scan Block Alert)</span>
-            </button>
-
-            {/* Step out / leave venue */}
-            <button
-              onClick={handleSimulateExitScan}
-              disabled={simulating}
-              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-neutral-950 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-95"
-            >
-              <LogOut className="w-4 h-4 text-neutral-950" />
-              <span>Simulate Security Scanning Exit (I Am Leaving Venue)</span>
-            </button>
-          </div>
-        )}
-
-        {/* Switch to Security */}
-        {securityStaff && (
-          <button
-            onClick={() => {
-              playClickSound();
-              switchAccountFast(securityStaff.id);
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Switch to Security ({securityStaff.name})</span>
-            </div>
-            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-              Camera Scanner
-            </span>
-          </button>
-        )}
-
-        {/* Switch to IT */}
-        {itStaff && (
-          <button
-            onClick={() => {
-              playClickSound();
-              switchAccountFast(itStaff.id);
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Switch to IT ({itStaff.name})</span>
-            </div>
-            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-              Camera Scanner
-            </span>
-          </button>
-        )}
-
-        {/* Switch to Admin */}
-        {adminStaff && (
-          <button
-            onClick={() => {
-              playClickSound();
-              switchAccountFast(adminStaff.id);
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-amber-400 text-neutral-200 text-xs font-semibold flex items-center justify-between transition cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-amber-400" />
-              <span>Switch to Super Admin ({adminStaff.name})</span>
-            </div>
-            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-              Full Admin
-            </span>
-          </button>
-        )}
-
-        {/* Sign Out */}
-        <button
-          onClick={() => {
-            playClickSound();
-            logout();
-          }}
-          className="w-full py-2 px-3 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 text-red-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out / Change Account</span>
-        </button>
+          </span>
+        </div>
       </div>
     </div>
   );

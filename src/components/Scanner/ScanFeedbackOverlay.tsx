@@ -131,11 +131,11 @@ export const ScanFeedbackOverlay: React.FC<ScanFeedbackOverlayProps> = ({ result
         {/* Status Title */}
         <div className="relative z-10">
           <h2
-            className={`text-2xl font-black tracking-wider uppercase leading-tight ${
+            className={`text-2xl font-black tracking-wider uppercase leading-tight font-display ${
               isReEntry
                 ? 'text-emerald-300'
                 : isSuccess || isExit
-                ? 'bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent'
+                ? 'bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 bg-clip-text text-transparent'
                 : isAlready
                 ? 'text-red-400'
                 : 'text-rose-300'

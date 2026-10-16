@@ -50,16 +50,18 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border border-amber-500/40 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-gradient-to-b from-[#1b0307] via-[#100104] to-[#080103] border-2 border-amber-500/60 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-[0_0_60px_rgba(220,38,38,0.35),0_0_40px_rgba(245,158,11,0.2)] overflow-hidden text-white">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-neutral-800 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-red-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Building2 className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-red-700 to-amber-600 border border-amber-300/60 flex items-center justify-center text-neutral-950 font-black shadow-md shadow-red-950/40">
+              <Building2 className="w-4 h-4 text-neutral-950" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-amber-200">MUN Venue Official Passes & QR Codes</h2>
+              <h2 className="text-base font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 uppercase tracking-wider">
+                WEST MUN Official Passes & QR Codes
+              </h2>
               <p className="text-xs text-neutral-400">
                 Test the entrance check-in, duplicate re-scan block, and departure exit lifecycle
               </p>
@@ -70,14 +72,14 @@ export const TestTicketBadges: React.FC<TestTicketBadgesProps> = ({ isOpen, onCl
               playClickSound();
               onClose();
             }}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-amber-300 hover:bg-red-950/60 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Filter categories */}
-        <div className="px-5 py-2.5 bg-black/50 border-b border-neutral-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="px-5 py-2.5 bg-black/60 border-b border-red-900/60 flex items-center gap-2 overflow-x-auto no-scrollbar">
           {['All', 'Staff', 'VIP', 'General Admission', 'Artist', 'Press'].map((cat) => (
             <button
               key={cat}

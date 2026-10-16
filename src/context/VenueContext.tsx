@@ -56,11 +56,11 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'mun_venue_guests_v8';
-const STORAGE_KEY_STAFF = 'mun_venue_staff_v8';
-const STORAGE_KEY_SETTINGS = 'mun_venue_settings_v8';
-const STORAGE_KEY_LOGS = 'mun_venue_logs_v8';
-const STORAGE_KEY_AUTH = 'mun_venue_auth_v8';
+const STORAGE_KEY_GUESTS = 'west_mun_guests_v9_redgold';
+const STORAGE_KEY_STAFF = 'west_mun_staff_v9_redgold';
+const STORAGE_KEY_SETTINGS = 'west_mun_settings_v9_redgold';
+const STORAGE_KEY_LOGS = 'west_mun_logs_v9_redgold';
+const STORAGE_KEY_AUTH = 'west_mun_auth_v9_redgold';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -79,84 +79,14 @@ const DEFAULT_SETTINGS: VenueSettings = {
 // Both IT and Security members have the ability to add members to their team.
 // All other roles (Design, Media, PR, HR, etc.) have their personal scannable QR Pass.
 const INITIAL_STAFF: StaffMember[] = [
-  // Executive Board & Leadership
+  // IT Team (Admin of IT: AhmedMagdi - pass: 344)
   {
-    id: 'staff-rakan',
-    name: 'Rakan Almerbed',
-    email: 'rakan.almerbed@munvenue.org',
-    password: 'gold2026',
-    role: 'super_admin',
-    accessKey: '1001',
-    assignedGate: 'MUN Venue',
-    ticketId: 'MUN-EXEC-01',
-    canScan: true,
-    canManualCheckIn: true,
-    canRevokeCheckIn: true,
-    canManageStaff: true,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-yousef-saifi',
-    name: 'Yousef Saifi',
-    email: 'yousef.saifi@munvenue.org',
-    password: 'gold2026',
-    role: 'executive',
-    accessKey: '1002',
-    assignedGate: 'MUN Venue',
-    ticketId: 'MUN-EXEC-02',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-fahad-usg',
-    name: 'Fahad',
-    email: 'fahad.usg@munvenue.org',
-    password: 'gold2026',
-    role: 'executive',
-    accessKey: '1003',
-    assignedGate: 'MUN Venue',
-    ticketId: 'MUN-EXEC-03',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-muaz',
-    name: 'Muaz El Amir',
-    email: 'muaz.elamir@munvenue.org',
-    password: 'gold2026',
-    role: 'executive',
-    accessKey: '1004',
-    assignedGate: 'MUN Venue',
-    ticketId: 'MUN-EXEC-04',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-
-  // IT Team (Can scan + can add members to IT team)
-  {
-    id: 'staff-it-mohamed',
-    name: 'Mohamed Magdi',
-    email: 'mohamed.magdi@munvenue.org',
-    password: 'gold2026',
+    id: 'staff-it-ahmed',
+    name: 'Ahmed Magdi',
+    email: 'AhmedMagdi',
+    password: '344',
     role: 'it',
-    accessKey: '6001',
+    accessKey: '344',
     assignedGate: 'MUN Venue',
     ticketId: 'MUN-IT-01',
     canScan: true,
@@ -171,7 +101,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-it-saleh',
     name: 'Saleh Samaha',
     email: 'saleh.samaha@munvenue.org',
-    password: 'gold2026',
+    password: 'it6002',
     role: 'it',
     accessKey: '6002',
     assignedGate: 'MUN Venue',
@@ -185,12 +115,12 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
 
-  // Security Team (Can scan + can add members to Security team)
+  // Security Team (Can scan + door access enforcement)
   {
     id: 'staff-sec-lead',
     name: 'Security Lead',
     email: 'security.lead@munvenue.org',
-    password: 'gold2026',
+    password: 'sec7001',
     role: 'security',
     accessKey: '7001',
     assignedGate: 'MUN Venue',
@@ -207,7 +137,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-sec-officer',
     name: 'Security Officer',
     email: 'security.officer@munvenue.org',
-    password: 'gold2026',
+    password: 'sec7002',
     role: 'security',
     accessKey: '7002',
     assignedGate: 'MUN Venue',
@@ -221,12 +151,82 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
 
+  // Executive Board & Leadership
+  {
+    id: 'staff-rakan',
+    name: 'Rakan Almerbed',
+    email: 'rakan.almerbed@munvenue.org',
+    password: 'sg1001',
+    role: 'super_admin',
+    accessKey: '1001',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-01',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-yousef-saifi',
+    name: 'Yousef Saifi',
+    email: 'yousef.saifi@munvenue.org',
+    password: 'exec1002',
+    role: 'executive',
+    accessKey: '1002',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-fahad-usg',
+    name: 'Fahad',
+    email: 'fahad.usg@munvenue.org',
+    password: 'exec1003',
+    role: 'executive',
+    accessKey: '1003',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-muaz',
+    name: 'Muaz El Amir',
+    email: 'muaz.elamir@munvenue.org',
+    password: 'exec1004',
+    role: 'executive',
+    accessKey: '1004',
+    assignedGate: 'MUN Venue',
+    ticketId: 'MUN-EXEC-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
   // Secretariat (Sec)
   {
     id: 'staff-sec-yusef',
     name: 'Yusef Saad',
     email: 'yusef.saad@munvenue.org',
-    password: 'gold2026',
+    password: 'sec2001',
     role: 'secretary',
     accessKey: '2001',
     assignedGate: 'MUN Venue',
@@ -243,7 +243,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-sec-najla',
     name: 'Najla Rami',
     email: 'najla.rami@munvenue.org',
-    password: 'gold2026',
+    password: 'sec2002',
     role: 'secretary',
     accessKey: '2002',
     assignedGate: 'MUN Venue',
@@ -260,7 +260,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-sec-bushra',
     name: 'Bushra Ismail',
     email: 'bushra.ismail@munvenue.org',
-    password: 'gold2026',
+    password: 'sec2003',
     role: 'secretary',
     accessKey: '2003',
     assignedGate: 'MUN Venue',
@@ -279,7 +279,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-mkt-naya',
     name: 'Naya Barakat',
     email: 'naya.barakat@munvenue.org',
-    password: 'gold2026',
+    password: 'mkt3001',
     role: 'marketing',
     accessKey: '3001',
     assignedGate: 'MUN Venue',
@@ -296,7 +296,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-mkt-sama',
     name: 'Sama Sameh',
     email: 'sama.sameh@munvenue.org',
-    password: 'gold2026',
+    password: 'mkt3002',
     role: 'marketing',
     accessKey: '3002',
     assignedGate: 'MUN Venue',
@@ -313,7 +313,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-mkt-jayda',
     name: 'Jayda Yasser',
     email: 'jayda.yasser@munvenue.org',
-    password: 'gold2026',
+    password: 'mkt3003',
     role: 'marketing',
     accessKey: '3003',
     assignedGate: 'MUN Venue',
@@ -332,7 +332,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-des-mallak',
     name: 'Mallak Abbas',
     email: 'mallak.abbas@munvenue.org',
-    password: 'gold2026',
+    password: 'des4001',
     role: 'designers',
     accessKey: '4001',
     assignedGate: 'MUN Venue',
@@ -349,7 +349,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-des-saud',
     name: 'Saud Alanazi',
     email: 'saud.alanazi@munvenue.org',
-    password: 'gold2026',
+    password: 'des4002',
     role: 'designers',
     accessKey: '4002',
     assignedGate: 'MUN Venue',
@@ -366,7 +366,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-des-layan',
     name: 'Layan Ahmed',
     email: 'layan.ahmed@munvenue.org',
-    password: 'gold2026',
+    password: 'des4003',
     role: 'designers',
     accessKey: '4003',
     assignedGate: 'MUN Venue',
@@ -383,7 +383,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-des-aya',
     name: 'Aya Nezar',
     email: 'aya.nezar@munvenue.org',
-    password: 'gold2026',
+    password: 'des4004',
     role: 'designers',
     accessKey: '4004',
     assignedGate: 'MUN Venue',
@@ -402,7 +402,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-med-hashem',
     name: 'Hashem',
     email: 'hashem.media@munvenue.org',
-    password: 'gold2026',
+    password: 'med5001',
     role: 'media_and_press',
     accessKey: '5001',
     assignedGate: 'MUN Venue',
@@ -419,7 +419,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-med-fahad',
     name: 'Fahad Al Kendi',
     email: 'fahad.alkendi@munvenue.org',
-    password: 'gold2026',
+    password: 'med5002',
     role: 'media_and_press',
     accessKey: '5002',
     assignedGate: 'MUN Venue',
@@ -436,7 +436,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-med-selena',
     name: 'Selena',
     email: 'selena.media@munvenue.org',
-    password: 'gold2026',
+    password: 'med5003',
     role: 'media_and_press',
     accessKey: '5003',
     assignedGate: 'MUN Venue',
@@ -453,7 +453,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-med-mohammed',
     name: 'Mohammed Al Nahas',
     email: 'mohammed.alnahas@munvenue.org',
-    password: 'gold2026',
+    password: 'med5004',
     role: 'media_and_press',
     accessKey: '5004',
     assignedGate: 'MUN Venue',
@@ -470,7 +470,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-med-dana',
     name: 'Dana Alnajar',
     email: 'dana.alnajar@munvenue.org',
-    password: 'gold2026',
+    password: 'med5005',
     role: 'media_and_press',
     accessKey: '5005',
     assignedGate: 'MUN Venue',
@@ -489,7 +489,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-vol-saad',
     name: 'Saad Usman',
     email: 'saad.usman@munvenue.org',
-    password: 'gold2026',
+    password: 'vol8001',
     role: 'volunteers',
     accessKey: '8001',
     assignedGate: 'MUN Venue',
@@ -506,7 +506,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-vol-maram',
     name: 'Maram Ali',
     email: 'maram.ali@munvenue.org',
-    password: 'gold2026',
+    password: 'vol8002',
     role: 'volunteers',
     accessKey: '8002',
     assignedGate: 'MUN Venue',
@@ -521,9 +521,9 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-vol-ahmed-magdi',
-    name: 'Ahmed Magdi',
-    email: 'ahmed.magdi.vol@munvenue.org',
-    password: 'gold2026',
+    name: 'Ahmed Magdi (Volunteer)',
+    email: 'ahmed.vol@munvenue.org',
+    password: 'vol8003',
     role: 'volunteers',
     accessKey: '8003',
     assignedGate: 'MUN Venue',
@@ -540,7 +540,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-vol-younis',
     name: 'Younis',
     email: 'younis.vol@munvenue.org',
-    password: 'gold2026',
+    password: 'vol8004',
     role: 'volunteers',
     accessKey: '8004',
     assignedGate: 'MUN Venue',
@@ -554,12 +554,12 @@ const INITIAL_STAFF: StaffMember[] = [
     lastActiveTime: new Date().toISOString(),
   },
 
-  // Other Departments
+  // Logistics, PR, HR, Ceremonies, DCC
   {
     id: 'staff-log-ahmed',
     name: 'Ahmed El Amir',
     email: 'ahmed.elamir@munvenue.org',
-    password: 'gold2026',
+    password: 'log9001',
     role: 'logistics',
     accessKey: '9001',
     assignedGate: 'MUN Venue',
@@ -576,7 +576,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-pr-mazen',
     name: 'Mazen Alaa',
     email: 'mazen.alaa@munvenue.org',
-    password: 'gold2026',
+    password: 'pr9002',
     role: 'pr',
     accessKey: '9002',
     assignedGate: 'MUN Venue',
@@ -593,7 +593,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-hr-hoorein',
     name: 'Hoorein',
     email: 'hoorein.hr@munvenue.org',
-    password: 'gold2026',
+    password: 'hr9003',
     role: 'hr',
     accessKey: '9003',
     assignedGate: 'MUN Venue',
@@ -610,7 +610,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-hr-seif',
     name: 'Seif Ayman',
     email: 'seif.ayman@munvenue.org',
-    password: 'gold2026',
+    password: 'hr9004',
     role: 'hr',
     accessKey: '9004',
     assignedGate: 'MUN Venue',
@@ -627,7 +627,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-cer-sultana',
     name: 'Sultana',
     email: 'sultana.ceremonies@munvenue.org',
-    password: 'gold2026',
+    password: 'cer9005',
     role: 'ceremonies',
     accessKey: '9005',
     assignedGate: 'MUN Venue',
@@ -644,7 +644,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-dcc-majd',
     name: 'Majd',
     email: 'majd.dcc@munvenue.org',
-    password: 'gold2026',
+    password: 'dcc9006',
     role: 'dcc',
     accessKey: '9006',
     assignedGate: 'MUN Venue',
@@ -883,13 +883,13 @@ const INITIAL_GUESTS: Guest[] = [
 
   // IT (Can scan + can add members to IT team)
   {
-    id: 'g-it-mohamed',
-    name: 'Mohamed Magdi',
+    id: 'g-it-ahmed',
+    name: 'Ahmed Magdi',
     ticketId: 'MUN-IT-01',
     category: 'Staff',
-    role: 'Head of IT',
+    role: 'Admin of IT',
     tableOrSeat: 'IT Command',
-    notes: 'IT Department • Authorized Scanner',
+    notes: 'IT Department • Admin of IT • Authorized Scanner',
     status: 'Pending',
     scanCount: 0,
   },
@@ -1100,18 +1100,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.error(e);
     }
-    return [
-      {
-        id: 'log-1',
-        ticketId: 'MUN-EXEC-01',
-        guestName: 'Rakan Almerbed',
-        category: 'VIP',
-        gate: 'MUN Venue',
-        scannerName: 'Mohamed Magdi (Head of IT)',
-        timestamp: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-        type: 'CHECK_IN',
-      },
-    ];
+    return [];
   });
 
   const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
@@ -1183,16 +1172,52 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const cleanId = identifier.trim().toLowerCase();
       const cleanPass = pass.trim();
 
-      const user = staffMembers.find(
-        (s) =>
-          (s.email.toLowerCase() === cleanId || s.accessKey === cleanId || s.name.toLowerCase() === cleanId) &&
-          (s.password ? s.password === cleanPass : cleanPass === 'gold2026' || cleanPass.length >= 4)
-      );
+      if (!cleanId || !cleanPass) {
+        return {
+          success: false,
+          error: 'Please enter both your name/email and confidential password.',
+        };
+      }
+
+      // Special check for Admin of IT AhmedMagdi
+      const isAhmedMagdi =
+        cleanId === 'ahmedmagdi' ||
+        cleanId === 'ahmed magdi' ||
+        cleanId === 'ahmed.magdi' ||
+        cleanId === 'ahmedmagdi@munvenue.org';
+
+      const user = staffMembers.find((s) => {
+        if (isAhmedMagdi && s.role === 'it') return true;
+        const sEmail = s.email.toLowerCase();
+        const sName = s.name.toLowerCase();
+        const sNormalizedName = sName.replace(/\s+/g, '');
+        const sKey = (s.accessKey || '').toLowerCase();
+        const sTicket = (s.ticketId || '').toLowerCase();
+        return (
+          sEmail === cleanId ||
+          sName === cleanId ||
+          sNormalizedName === cleanId.replace(/\s+/g, '') ||
+          sKey === cleanId ||
+          sTicket === cleanId
+        );
+      });
 
       if (!user) {
         return {
           success: false,
-          error: 'Invalid credentials. Password or staff email does not match any MUN Venue account.',
+          error: 'Account not found. Please check your assigned email or username in the credentials directory.',
+        };
+      }
+
+      const passMatches =
+        user.password === cleanPass ||
+        (user.role === 'it' && isAhmedMagdi && cleanPass === '344') ||
+        user.accessKey === cleanPass;
+
+      if (!passMatches) {
+        return {
+          success: false,
+          error: `Incorrect password for ${user.name}. Please enter the password assigned to your account.`,
         };
       }
 
@@ -1418,6 +1443,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             message: `${guest.name} is not currently checked in to MUN Venue (${guest.status === 'Left' ? 'Already departed' : 'Has not entered yet'}).`,
           };
           if (settings.soundEnabled) playWarningBuzzer();
+          if (settings.vibrationEnabled) vibrateWarning();
           setLastScanResult(res);
           return res;
         }

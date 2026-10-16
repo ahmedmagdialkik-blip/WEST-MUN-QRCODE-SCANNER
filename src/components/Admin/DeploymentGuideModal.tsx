@@ -188,17 +188,19 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
 `;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-gradient-to-b from-[#1b0307] via-[#100104] to-[#080103] border-2 border-amber-500/60 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-[0_0_60px_rgba(220,38,38,0.35),0_0_40px_rgba(245,158,11,0.2)] overflow-hidden text-white">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-red-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Cloud className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-red-700 to-amber-600 border border-amber-300/60 flex items-center justify-center text-neutral-950 font-black shadow-md shadow-red-950/40">
+              <Cloud className="w-4 h-4 text-neutral-950" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Production Deployment & Database Schemas</h2>
-              <p className="text-xs text-slate-400">Deploy West Mun to Firebase Hosting, Vercel, or Supabase</p>
+              <h2 className="text-base font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 uppercase tracking-wider">
+                Production Deployment & Database Schemas
+              </h2>
+              <p className="text-xs text-neutral-400">Deploy West Mun to Firebase Hosting, Vercel, or Supabase</p>
             </div>
           </div>
           <button
@@ -206,14 +208,14 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
               playClickSound();
               onClose();
             }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-amber-300 hover:bg-red-950/60 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-5 py-2.5 bg-slate-950/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="px-5 py-2.5 bg-black/60 border-b border-red-900/60 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => {
               playClickSound();
@@ -221,8 +223,8 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
               activeTab === 'firebase'
-                ? 'bg-amber-500 text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-red-600 to-amber-500 text-neutral-950 font-bold shadow-md shadow-red-950/30'
+                : 'text-neutral-400 hover:text-white hover:bg-red-950/50'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
@@ -236,8 +238,8 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
               activeTab === 'vercel'
-                ? 'bg-white text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-neutral-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-neutral-400 hover:text-white hover:bg-red-950/50'
             }`}
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -251,8 +253,8 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
               activeTab === 'firestore_rules'
-                ? 'bg-emerald-500 text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-red-600 to-amber-600 text-neutral-950 font-bold shadow-md shadow-red-950/30'
+                : 'text-neutral-400 hover:text-white hover:bg-red-950/50'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
@@ -266,8 +268,8 @@ CREATE POLICY "Enable insert logs for door scanners" ON public.check_in_logs FOR
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
               activeTab === 'supabase_sql'
-                ? 'bg-teal-500 text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-neutral-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-neutral-400 hover:text-white hover:bg-red-950/50'
             }`}
           >
             <Database className="w-3.5 h-3.5" />

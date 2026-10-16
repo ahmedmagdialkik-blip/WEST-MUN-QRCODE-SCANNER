@@ -24,25 +24,30 @@ export const BottomNav: React.FC = () => {
     currentUser?.role === 'hr';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-black/95 backdrop-blur-xl border-t border-amber-500/30 pb-safe pt-1 px-2 shadow-[0_-4px_30px_rgba(0,0,0,0.9)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[#120f0d]/95 backdrop-blur-sm border-t border-[#B08D57]/30 pb-safe pt-1.5 px-3 shadow-[0_-4px_25px_rgba(0,0,0,0.8)]">
       <div className="max-w-md mx-auto flex items-center justify-around h-16">
         {/* Scanner Tab (Centerpiece) */}
         <button
           onClick={() => handleTabChange('scanner')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer relative ${
-            activeTab === 'scanner' ? 'text-amber-300 font-bold' : 'text-neutral-400 hover:text-amber-200'
+            activeTab === 'scanner' ? 'text-amber-200' : 'text-neutral-400 hover:text-amber-200'
           }`}
         >
           <div
-            className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-transform ${
+            className={`relative flex items-center justify-center w-11 h-11 rounded-md transition-all duration-200 ${
               activeTab === 'scanner'
-                ? 'bg-gradient-to-tr from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 shadow-[0_0_20px_rgba(245,158,11,0.5)] -translate-y-2 scale-110 border border-yellow-200'
-                : 'text-neutral-400'
+                ? 'bg-[#6E4E2E] text-[#F5F2EA] shadow-[0_4px_16px_rgba(0,0,0,0.7)] -translate-y-2 border border-[#B08D57]'
+                : 'text-neutral-400 bg-transparent'
             }`}
           >
-            <QrCode className="w-5 h-5 stroke-[2.5]" />
+            <QrCode className="w-5 h-5 stroke-[2.2]" />
           </div>
-          <span className={`text-[10px] mt-0.5 tracking-tight ${activeTab === 'scanner' ? '-translate-y-1 text-amber-300' : ''}`}>
+          <span
+            className={`text-[10px] mt-0.5 tracking-wider font-serif uppercase ${
+              activeTab === 'scanner' ? '-translate-y-1 text-[#B08D57] font-bold' : ''
+            }`}
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
             Scanner
           </span>
         </button>
@@ -51,50 +56,65 @@ export const BottomNav: React.FC = () => {
         <button
           onClick={() => handleTabChange('dashboard')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-colors cursor-pointer ${
-            activeTab === 'dashboard' ? 'text-amber-300 font-bold' : 'text-neutral-400 hover:text-amber-200'
+            activeTab === 'dashboard' ? 'text-[#B08D57]' : 'text-neutral-400 hover:text-amber-200'
           }`}
         >
           <div className="relative">
             <LayoutDashboard className="w-5 h-5" />
-            <span className="absolute -top-1 -right-2 text-[8px] font-mono px-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <span className="absolute -top-1 -right-2 text-[8px] font-mono px-1 rounded-xs bg-[#241b14] text-[#B08D57] border border-[#B08D57]/40">
               {stats.capacityPercent}%
             </span>
           </div>
-          <span className="text-[10px] mt-1 tracking-tight">Dashboard</span>
+          <span
+            className="text-[10px] mt-1 tracking-wider font-serif uppercase"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Console
+          </span>
         </button>
 
         {/* Guest List Tab */}
         <button
           onClick={() => handleTabChange('guestlist')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-colors cursor-pointer ${
-            activeTab === 'guestlist' ? 'text-amber-300 font-bold' : 'text-neutral-400 hover:text-amber-200'
+            activeTab === 'guestlist' ? 'text-[#B08D57]' : 'text-neutral-400 hover:text-amber-200'
           }`}
         >
           <div className="relative">
             <Users className="w-5 h-5" />
             {stats.pendingCount > 0 && (
-              <span className="absolute -top-1 -right-2 text-[8px] font-mono px-1 rounded-full bg-neutral-900 text-amber-300 border border-neutral-700">
+              <span className="absolute -top-1 -right-2 text-[8px] font-mono px-1 rounded-xs bg-[#1a1410] text-[#B08D57] border border-[#B08D57]/30">
                 {stats.pendingCount}
               </span>
             )}
           </div>
-          <span className="text-[10px] mt-1 tracking-tight">Guest List</span>
+          <span
+            className="text-[10px] mt-1 tracking-wider font-serif uppercase"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Delegates
+          </span>
         </button>
 
         {/* Staff & Roles Tab */}
         <button
           onClick={() => handleTabChange('team')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-colors cursor-pointer ${
-            activeTab === 'team' ? 'text-amber-300 font-bold' : 'text-neutral-400 hover:text-amber-200'
+            activeTab === 'team' ? 'text-[#B08D57]' : 'text-neutral-400 hover:text-amber-200'
           }`}
         >
           <div className="relative">
             <ShieldAlert className="w-5 h-5" />
             {isManagement && (
-              <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-black"></span>
+              <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#B08D57] ring-1 ring-black"></span>
             )}
           </div>
-          <span className="text-[10px] mt-1 tracking-tight">Roles & Staff</span>
+          <span
+            className="text-[10px] mt-1 tracking-wider font-serif uppercase"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Chambers
+          </span>
         </button>
       </div>
     </nav>

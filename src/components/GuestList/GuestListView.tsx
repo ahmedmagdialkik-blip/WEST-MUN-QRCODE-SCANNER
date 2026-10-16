@@ -17,8 +17,9 @@ import {
   FileText,
   Check,
   X,
-  AlertTriangle,
   Crown,
+  Shield,
+  Filter,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
 
@@ -82,7 +83,7 @@ export const GuestListView: React.FC = () => {
       }
 
       const res = importGuests(parsed);
-      setImportNotification(`Successfully imported! Added: ${res.added}, Updated: ${res.updated}`);
+      setImportNotification(`Manifest updated. Added: ${res.added}, Updated: ${res.updated}`);
       setTimeout(() => setImportNotification(null), 5000);
     };
 
@@ -97,7 +98,7 @@ export const GuestListView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `MUN_Venue_Manifest_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `West_Mun_Manifest_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -105,96 +106,62 @@ export const GuestListView: React.FC = () => {
 
   const handleDownloadTemplate = () => {
     playClickSound();
-    const templateContent = generateSampleCSVTemplate();
-    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = generateSampleCSVTemplate();
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'MUN_Venue_Sample_Template.csv');
+    link.setAttribute('download', 'West_Mun_Template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-4 pb-28 text-white">
-      <AddGuestModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
-      <TicketBadgeModal guest={activeBadgeGuest} onClose={() => setActiveBadgeGuest(null)} />
-
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-neutral-950 border border-red-500/50 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
-            <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-white mb-1">Reset All Door Check-Ins?</h3>
-            <p className="text-xs text-neutral-300 mb-5">
-              This will set all {guests.length} guest records back to &apos;Pending&apos; status. Recorded in the venue log.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  playClickSound();
-                  resetAllCheckIns();
-                  setShowResetConfirm(false);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
-              >
-                Confirm Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Top Controls Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-4 text-[#F5F2EA] pb-10">
+      {/* Header bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#B08D57]/30 pb-3">
         <div>
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <Crown className="w-4 h-4 text-amber-400" />
-            <h1 className="text-xl font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-              MUN Venue Guest Manifest
+          <div className="flex items-center gap-2">
+            <h1
+              className="text-lg sm:text-xl font-bold tracking-wider text-[#F5F2EA] uppercase font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Diplomatic Manifest
             </h1>
-          </div>
-          <p className="text-xs text-neutral-400">
-            {guests.length} total attendees •{' '}
-            <span className="text-amber-300 font-bold">
-              {guests.filter((g) => g.status === 'Checked-In').length} currently inside
+            <span className="text-[10px] px-2 py-0.5 rounded-none bg-[#221a15] text-[#B08D57] border border-[#B08D57]/40 font-mono">
+              {filteredGuests.length} Records
             </span>
-            {guests.filter((g) => g.status === 'Left').length > 0 && (
-              <span className="text-amber-400/80 ml-2">
-                ({guests.filter((g) => g.status === 'Left').length} left venue)
-              </span>
-            )}
+          </div>
+          <p
+            className="text-xs text-[#B08D57]/80 font-serif mt-0.5"
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+          >
+            Official delegate registry and access clearance records
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {currentUser?.canManualCheckIn && (
+        {/* Action Toolbar */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isSecretaryOrAdmin && (
             <button
               onClick={() => {
                 playClickSound();
                 setIsAddModalOpen(true);
               }}
-              className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/20"
+              className="px-3 py-1.5 bg-[#6E4E2E] hover:bg-[#B08D57] text-[#120f0d] font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm border border-[#B08D57]"
+              style={{ fontFamily: "'Cinzel', serif" }}
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Add Guest</span>
+              <UserPlus className="w-3.5 h-3.5 text-[#120f0d]" />
+              <span>Add Delegate</span>
             </button>
           )}
 
           {isSecretaryOrAdmin && (
             <>
-              <label className="px-3 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-200 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-amber-500/30">
-                <Upload className="w-4 h-4 text-amber-400" />
-                <span>Upload CSV</span>
+              <label className="px-2.5 py-1.5 bg-[#181310] hover:bg-[#251e19] text-[#B08D57] hover:text-[#F5F2EA] text-xs font-serif tracking-wider flex items-center gap-1.5 transition cursor-pointer border border-[#B08D57]/40">
+                <Upload className="w-3.5 h-3.5 text-[#B08D57]" />
+                <span className="hidden sm:inline">Import CSV</span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -206,19 +173,19 @@ export const GuestListView: React.FC = () => {
 
               <button
                 onClick={handleExportCSV}
-                className="px-3 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-200 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-amber-500/30"
-                title="Export guest list with check-in status"
+                className="px-2.5 py-1.5 bg-[#181310] hover:bg-[#251e19] text-[#B08D57] hover:text-[#F5F2EA] text-xs font-serif tracking-wider flex items-center gap-1.5 transition cursor-pointer border border-[#B08D57]/40"
+                title="Export CSV"
               >
-                <Download className="w-4 h-4 text-yellow-400" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <Download className="w-3.5 h-3.5 text-[#B08D57]" />
+                <span className="hidden sm:inline">Export</span>
               </button>
 
               <button
                 onClick={handleDownloadTemplate}
-                className="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 transition cursor-pointer border border-amber-500/30"
-                title="Download CSV Template"
+                className="p-1.5 bg-[#181310] hover:bg-[#251e19] text-[#B08D57] transition cursor-pointer border border-[#B08D57]/40"
+                title="Download Template"
               >
-                <FileText className="w-4 h-4 text-amber-400" />
+                <FileText className="w-3.5 h-3.5 text-[#B08D57]" />
               </button>
             </>
           )}
@@ -226,19 +193,19 @@ export const GuestListView: React.FC = () => {
           {isSuperAdmin && (
             <button
               onClick={() => setShowResetConfirm(true)}
-              className="p-2 rounded-xl bg-neutral-900 hover:bg-red-950/60 text-neutral-400 hover:text-red-400 transition cursor-pointer border border-amber-500/30"
+              className="p-1.5 bg-[#201010] hover:bg-[#321515] text-red-400 border border-red-900/60 transition cursor-pointer"
               title="Reset All Check-Ins"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
 
       {importNotification && (
-        <div className="p-3 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
+        <div className="p-2.5 bg-[#1a1512] border border-[#B08D57]/50 text-[#B08D57] text-xs flex items-center justify-between font-serif">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{importNotification}</span>
           </div>
           <button
@@ -251,57 +218,55 @@ export const GuestListView: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-3 space-y-3 shadow-lg">
+      <div className="bg-[#14100e] border border-[#B08D57]/40 p-3 space-y-2.5 shadow-md">
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#B08D57]/60" />
           <input
             type="text"
-            placeholder="Search by Guest Name, Ticket Code, or Table Number..."
+            placeholder="Search by Delegate Name, Ticket Code, or Committee..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400"
+            className="w-full bg-[#0d0a08] border border-[#B08D57]/40 text-[#F5F2EA] pl-9 pr-4 py-2 text-xs tracking-wider rounded-none focus:outline-none focus:border-[#B08D57] placeholder:text-neutral-600 font-serif"
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
-          <span className="text-[10px] text-amber-400/80 uppercase font-bold">Filter:</span>
-          {(['All', 'Checked-In', 'Left', 'Pending', 'VIP'] as const).map((filter) => (
+        {/* Status Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-serif">
+          {(['All', 'Pending', 'Checked-In', 'Left', 'VIP'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => {
                 playClickSound();
                 setStatusFilter(filter);
               }}
-              className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+              className={`px-3 py-1 text-xs tracking-wider uppercase transition cursor-pointer whitespace-nowrap border ${
                 statusFilter === filter
-                  ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-neutral-950 shadow-sm shadow-amber-500/30'
-                  : 'bg-black text-neutral-400 hover:text-white border border-neutral-800'
+                  ? 'bg-[#6E4E2E] text-[#F5F2EA] border-[#B08D57]'
+                  : 'bg-[#181310] text-[#B08D57]/70 border-[#B08D57]/20 hover:text-[#B08D57]'
               }`}
+              style={{ fontFamily: "'Cinzel', serif" }}
             >
               {filter}
             </button>
           ))}
-          <span className="text-xs text-neutral-400 ml-auto font-mono">
-            {filteredGuests.length} results
-          </span>
         </div>
       </div>
 
-      {/* Guest Cards */}
+      {/* Responsive Cards List (Replaces wide table on all screens) */}
       <div className="space-y-2.5">
         {filteredGuests.length === 0 ? (
-          <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-8 text-center">
-            <p className="text-sm font-semibold text-neutral-300">No guests match this criteria</p>
-            <p className="text-xs text-neutral-500 mt-1">
-              Try adjusting your search query or filter.
+          <div className="bg-[#14100e] border border-[#B08D57]/30 p-8 text-center">
+            <p
+              className="text-sm font-semibold text-[#F5F2EA] font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              No delegates match this query
+            </p>
+            <p
+              className="text-xs text-[#B08D57]/60 font-serif mt-1"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              Try adjusting your search criteria or filter.
             </p>
           </div>
         ) : (
@@ -312,132 +277,132 @@ export const GuestListView: React.FC = () => {
             return (
               <div
                 key={guest.id}
-                className={`p-3.5 rounded-2xl border transition-all ${
+                className={`p-3 sm:p-4 border transition-all duration-150 ${
                   isChecked
-                    ? 'bg-neutral-950/70 border-emerald-500/30'
+                    ? 'bg-[#121c15] border-emerald-500/40'
                     : isLeft
-                    ? 'bg-neutral-950/70 border-amber-500/30'
-                    : 'bg-gradient-to-b from-neutral-950 to-black border-amber-500/25 hover:border-amber-400/50'
+                    ? 'bg-[#1c160e] border-amber-500/40'
+                    : 'bg-[#15110f] border-[#B08D57]/30 hover:border-[#B08D57]/60'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Left Column: Delegate Information */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-black text-white truncate">{guest.name}</span>
+                      <span
+                        className="text-sm sm:text-base font-bold text-[#F5F2EA] truncate tracking-wide"
+                        style={{ fontFamily: "'Cinzel', serif" }}
+                      >
+                        {guest.name}
+                      </span>
 
                       {guest.role && (
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50">
+                        <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-none bg-[#241a14] text-[#B08D57] border border-[#B08D57]/40 font-serif">
                           {guest.role}
                         </span>
                       )}
 
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-none border ${
                           guest.category === 'VIP'
-                            ? 'bg-amber-500/25 text-amber-300 border border-amber-400/50'
-                            : guest.category === 'Artist' || guest.category === 'Backstage'
-                            ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/30'
-                            : 'bg-neutral-900 text-neutral-300 border border-neutral-800'
+                            ? 'bg-[#302315] text-amber-300 border-amber-400/50'
+                            : 'bg-[#1a1410] text-[#B08D57]/80 border-[#B08D57]/30'
                         }`}
                       >
                         {guest.category}
                       </span>
 
+                      {/* Status Tag */}
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        className={`text-[9px] font-semibold px-2 py-0.5 rounded-none flex items-center gap-1 border ${
                           isChecked
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
                             : isLeft
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
+                            ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+                            : 'bg-[#1a1410] text-neutral-400 border-[#B08D57]/30'
                         }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            isChecked ? 'bg-emerald-400' : isLeft ? 'bg-amber-400' : 'bg-neutral-500'
+                            isChecked
+                              ? 'bg-emerald-400'
+                              : isLeft
+                              ? 'bg-amber-400'
+                              : 'bg-neutral-500'
                           }`}
-                        ></span>
-                        {isChecked ? 'Inside Venue' : isLeft ? 'Left Venue (Cleared)' : 'Pending'}
+                        />
+                        <span>
+                          {isChecked ? 'Inside Venue' : isLeft ? 'Departed' : 'Pending Clearance'}
+                        </span>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs mt-1 text-neutral-400 font-mono">
-                      <span className="font-bold text-amber-300">{guest.ticketId}</span>
+                    <div className="flex items-center gap-3 text-xs mt-1 text-[#B08D57]/80 font-mono">
+                      <span className="font-bold text-[#D4AF37]">{guest.ticketId}</span>
                       {guest.tableOrSeat && (
-                        <span className="text-neutral-300 font-sans">• {guest.tableOrSeat}</span>
+                        <span className="text-neutral-400 font-serif">
+                          • {guest.tableOrSeat}
+                        </span>
                       )}
                     </div>
 
                     {isChecked && (
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
-                        <p className="text-[11px] text-neutral-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-400/80" />
-                          <span>
-                            Checked in at{' '}
-                            {guest.checkedInTime
-                              ? new Date(guest.checkedInTime).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : 'earlier'}{' '}
-                            by <span className="text-amber-200">{guest.checkedInBy || 'Security'}</span>
-                          </span>
-                        </p>
-
-                        {guest.scanCount > 1 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-950 border border-red-500/50 text-red-300 flex items-center gap-1">
-                            <span>Blocked Re-scans: {guest.scanCount - 1}</span>
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-[11px] text-neutral-400 flex items-center gap-1 mt-1 font-serif">
+                        <Clock className="w-3 h-3 text-[#B08D57]" />
+                        <span>
+                          Checked in at{' '}
+                          {guest.checkedInTime
+                            ? new Date(guest.checkedInTime).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'earlier'}{' '}
+                          by <strong className="text-[#F5F2EA]">{guest.checkedInBy || 'Security'}</strong>
+                        </span>
+                      </p>
                     )}
 
                     {isLeft && (
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
-                        <p className="text-[11px] text-amber-300/80 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-400" />
-                          <span>
-                            Left at{' '}
-                            {guest.lastExitedTime
-                              ? new Date(guest.lastExitedTime).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : 'earlier'}{' '}
-                            • Unlocked for re-entry scan
-                          </span>
-                        </p>
-                      </div>
-                    )}
-
-                    {guest.notes && (
-                      <p className="text-[11px] text-neutral-400 italic mt-0.5">{guest.notes}</p>
+                      <p className="text-[11px] text-amber-300/80 flex items-center gap-1 mt-1 font-serif">
+                        <Clock className="w-3 h-3 text-amber-400" />
+                        <span>
+                          Departed at{' '}
+                          {guest.lastExitedTime
+                            ? new Date(guest.lastExitedTime).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'earlier'}{' '}
+                          (Unlocked for re-scan)
+                        </span>
+                      </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Right Column: Actions */}
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    {/* View Pass & QR */}
                     <button
                       onClick={() => {
                         playClickSound();
                         setActiveBadgeGuest(guest);
                       }}
-                      className="p-2 rounded-xl bg-neutral-900 border border-amber-500/20 hover:border-amber-400 text-amber-300 transition cursor-pointer active:scale-95"
-                      title="View Pass & QR Code"
+                      className="p-2 bg-[#181310] hover:bg-[#251e19] border border-[#B08D57]/40 text-[#B08D57] transition cursor-pointer"
+                      title="View Diplomatic Pass"
                     >
                       <QrCode className="w-4 h-4" />
                     </button>
 
-                    {/* STATUS ACTION BUTTONS */}
+                    {/* Status Toggle Actions */}
                     {isChecked ? (
                       <div className="flex items-center gap-1">
-                        {/* Mark Left action: unlocks them to re-scan when they return! */}
                         <button
                           onClick={() => {
                             playClickSound();
                             markGuestLeft(guest.id);
                           }}
-                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold transition cursor-pointer active:scale-95"
-                          title="Record Departure (Unlocks QR code for re-scan)"
+                          className="px-2.5 py-1.5 bg-[#251d14] hover:bg-[#34271a] border border-amber-500/40 text-amber-300 text-xs font-serif tracking-wider uppercase transition cursor-pointer"
+                          title="Record Departure"
                         >
                           Mark Left
                         </button>
@@ -448,7 +413,7 @@ export const GuestListView: React.FC = () => {
                               playClickSound();
                               undoCheckIn(guest.id);
                             }}
-                            className="p-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-amber-400 text-neutral-400 hover:text-amber-300 text-xs transition cursor-pointer active:scale-95"
+                            className="p-2 bg-[#1a1410] hover:bg-[#241a14] border border-[#B08D57]/30 text-neutral-400 hover:text-[#B08D57] transition cursor-pointer"
                             title="Reset to Pending"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
@@ -462,11 +427,12 @@ export const GuestListView: React.FC = () => {
                             playClickSound();
                             manualCheckIn(guest.id);
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm ${
+                          className={`px-3 py-1.5 text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-1 transition cursor-pointer border ${
                             isLeft
-                              ? 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-neutral-950'
-                              : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400'
+                              ? 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border-emerald-500/50'
+                              : 'bg-gradient-to-r from-[#6E4E2E] via-[#B08D57] to-[#6E4E2E] text-[#120f0d] border-[#B08D57]'
                           }`}
+                          style={{ fontFamily: "'Cinzel', serif" }}
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>{isLeft ? 'Re-Enter' : 'Check-In'}</span>
@@ -480,8 +446,8 @@ export const GuestListView: React.FC = () => {
                           playClickSound();
                           removeGuest(guest.id);
                         }}
-                        className="p-2 rounded-xl text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition cursor-pointer"
-                        title="Delete Guest"
+                        className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition cursor-pointer"
+                        title="Delete Delegate"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -493,6 +459,60 @@ export const GuestListView: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Add Guest Modal */}
+      {isAddModalOpen && (
+        <AddGuestModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+        />
+      )}
+
+      {/* Ticket Badge Modal */}
+      {activeBadgeGuest && (
+        <TicketBadgeModal
+          guest={activeBadgeGuest}
+          onClose={() => setActiveBadgeGuest(null)}
+        />
+      )}
+
+      {/* Reset Confirmation Dialog */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#161210] border border-[#B08D57]/60 p-5 shadow-2xl text-center space-y-3">
+            <h3
+              className="text-base font-bold text-[#F5F2EA] font-serif uppercase tracking-wider"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Reset All Check-Ins
+            </h3>
+            <p
+              className="text-xs text-neutral-300 font-serif leading-relaxed"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              Are you sure you want to reset all delegates back to Pending status? This action will clear current check-in timestamps.
+            </p>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-3 py-1.5 bg-[#1e1814] text-[#B08D57] text-xs font-serif tracking-wider uppercase border border-[#B08D57]/30 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  playClickSound();
+                  resetAllCheckIns();
+                  setShowResetConfirm(false);
+                }}
+                className="px-3 py-1.5 bg-red-900/60 hover:bg-red-800 text-red-200 text-xs font-serif tracking-wider uppercase border border-red-500/50 transition"
+              >
+                Confirm Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

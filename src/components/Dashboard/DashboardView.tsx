@@ -9,7 +9,6 @@ import {
   Clock,
   ShieldCheck,
   RotateCcw,
-  Sparkles,
   AlertTriangle,
   ArrowUpRight,
   Crown,
@@ -24,7 +23,7 @@ export const DashboardView: React.FC = () => {
     currentUser?.role === 'it' ||
     currentUser?.role === 'security';
 
-  const categories = ['VIP', 'General Admission', 'Artist', 'Backstage', 'Press'] as const;
+  const categories = ['VIP', 'General Admission', 'Artist', 'Backstage', 'Press', 'Staff'] as const;
   const categoryStats = categories.map((cat) => {
     const total = guests.filter((g) => g.category === cat).length;
     const checked = guests.filter((g) => g.category === cat && g.status === 'Checked-In').length;
@@ -32,32 +31,34 @@ export const DashboardView: React.FC = () => {
     return { category: cat, total, checked, percent };
   });
 
-  const gateCounts: Record<string, number> = {};
-  logs
-    .filter((l) => l.type === 'CHECK_IN')
-    .forEach((l) => {
-      gateCounts[l.gate] = (gateCounts[l.gate] || 0) + 1;
-    });
-
   const isNearCapacity = stats.capacityPercent >= settings.warningCapacityPercentage;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-5 pb-24 text-white">
-      {/* Event Header in Black & Gold */}
-      <div className="bg-gradient-to-r from-neutral-950 via-neutral-900 to-black border border-amber-500/40 rounded-3xl p-5 shadow-[0_4px_30px_rgba(212,175,55,0.12)] relative overflow-hidden">
+    <div className="space-y-4 text-[#F5F2EA] pb-16">
+      {/* Event Header in Antique Gold & Charcoal */}
+      <div className="bg-[#14110f] border border-[#B08D57]/50 p-4 sm:p-5 shadow-md relative">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-              <span className="text-xs uppercase font-black tracking-widest text-amber-300">
-                Live Door Synchronization • {currentUser ? ROLE_LABELS[currentUser.role]?.title : 'Staff'}
+              <span className="w-2 h-2 rounded-full bg-[#B08D57] animate-pulse" />
+              <span
+                className="text-[10px] uppercase font-bold tracking-widest text-[#B08D57] font-serif"
+                style={{ fontFamily: "'Cinzel', serif" }}
+              >
+                Live Diplomatic Synchronization • {currentUser ? ROLE_LABELS[currentUser.role]?.title : 'Staff'}
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+            <h1
+              className="text-lg sm:text-2xl font-bold uppercase tracking-wider text-[#F5F2EA] font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
               {settings.currentEventName}
             </h1>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              Venue: <span className="text-amber-300 font-semibold">{settings.venueName}</span> • Date: {settings.eventDate}
+            <p
+              className="text-xs text-[#B08D57]/80 font-serif mt-0.5"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              Venue: <span className="text-[#F5F2EA] font-semibold">{settings.venueName}</span> • Date: {settings.eventDate}
             </p>
           </div>
 
@@ -66,133 +67,132 @@ export const DashboardView: React.FC = () => {
               playClickSound();
               setActiveTab('scanner');
             }}
-            className="self-start sm:self-center px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition cursor-pointer active:scale-95"
+            className="self-start sm:self-center px-3.5 py-2 bg-[#6E4E2E] hover:bg-[#B08D57] text-[#120f0d] font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm border border-[#B08D57]"
+            style={{ fontFamily: "'Cinzel', serif" }}
           >
-            <span>Scan Tickets</span>
-            <ArrowUpRight className="w-4 h-4" />
+            <span>Launch Scanner</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#120f0d]" />
           </button>
         </div>
 
         {isNearCapacity && (
-          <div className="mt-4 p-3 rounded-xl bg-amber-950/60 border border-amber-500/50 flex items-center gap-2.5 text-xs text-amber-200">
+          <div className="mt-3 p-2.5 bg-[#251814] border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 font-serif">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
-              Venue is nearing maximum capacity ({stats.capacityPercent}% full). Coordinate door entry pacing with Security and Ceremony Director.
+              Venue is nearing maximum capacity ({stats.capacityPercent}% full). Coordinate door entry pacing with Security and IT Directorate.
             </span>
           </div>
         )}
       </div>
 
       {/* Primary Capacity Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Total Checked In */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-amber-300/80">Inside Venue</span>
-            <UserCheck className="w-4 h-4 text-amber-400" />
+        <div className="bg-[#14100e] border border-[#B08D57]/30 p-3 sm:p-4 shadow-sm">
+          <div className="flex items-center justify-between text-[#B08D57]/80 mb-1.5">
+            <span
+              className="text-[10px] uppercase font-bold tracking-wider font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Inside Venue
+            </span>
+            <UserCheck className="w-4 h-4 text-[#B08D57]" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-[#F5F2EA]">
             {stats.checkedInCount}
           </div>
-          <p className="text-[11px] text-neutral-400 mt-1">Validated attendees</p>
+          <p className="text-[10px] text-neutral-400 font-serif mt-0.5">Validated delegates</p>
         </div>
 
         {/* Capacity Remaining */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-amber-300/80">Available</span>
-            <Users className="w-4 h-4 text-yellow-400" />
+        <div className="bg-[#14100e] border border-[#B08D57]/30 p-3 sm:p-4 shadow-sm">
+          <div className="flex items-center justify-between text-[#B08D57]/80 mb-1.5">
+            <span
+              className="text-[10px] uppercase font-bold tracking-wider font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Available
+            </span>
+            <Users className="w-4 h-4 text-[#B08D57]" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-yellow-200">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-[#D4AF37]">
             {stats.capacityRemaining}
           </div>
-          <p className="text-[11px] text-neutral-400 mt-1">Remaining entry slots</p>
+          <p className="text-[10px] text-neutral-400 font-serif mt-0.5">Of {settings.totalCapacity} maximum</p>
         </div>
 
-        {/* Max Capacity */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-amber-300/80">Capacity Cap</span>
-            <ShieldCheck className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-white">
-            {settings.totalCapacity}
-          </div>
-          <p className="text-[11px] text-neutral-400 mt-1">Venue safety limit</p>
-        </div>
-
-        {/* Pending Manifest */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between text-neutral-400 mb-2">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-amber-300/80">Pending List</span>
-            <TrendingUp className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-400">
-            {stats.pendingCount}
-          </div>
-          <p className="text-[11px] text-neutral-400 mt-1">Awaiting door arrival</p>
-        </div>
-      </div>
-
-      {/* Gold Occupancy Gauge */}
-      <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 sm:p-5 shadow-lg">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-amber-400" />
-            <span className="text-xs uppercase font-black tracking-wider text-amber-200">
-              Real-Time Occupancy Gauge
+        {/* Occupancy Rate */}
+        <div className="bg-[#14100e] border border-[#B08D57]/30 p-3 sm:p-4 shadow-sm">
+          <div className="flex items-center justify-between text-[#B08D57]/80 mb-1.5">
+            <span
+              className="text-[10px] uppercase font-bold tracking-wider font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Occupancy
             </span>
+            <TrendingUp className="w-4 h-4 text-[#B08D57]" />
           </div>
-          <span className="text-sm font-mono font-black text-amber-300">
-            {stats.capacityPercent}% Full
-          </span>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-[#F5F2EA]">
+            {stats.capacityPercent}%
+          </div>
+          <div className="w-full bg-[#201814] h-1.5 mt-2 border border-[#B08D57]/20 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${
+                isNearCapacity ? 'bg-amber-400' : 'bg-[#B08D57]'
+              }`}
+              style={{ width: `${Math.min(100, stats.capacityPercent)}%` }}
+            />
+          </div>
         </div>
 
-        <div className="w-full h-4 bg-black rounded-full overflow-hidden p-0.5 border border-amber-500/40">
-          <div
-            className={`h-full rounded-full transition-all duration-500 shadow-md ${
-              stats.capacityPercent > 90
-                ? 'bg-red-500 shadow-red-500/50'
-                : stats.capacityPercent > 75
-                ? 'bg-gradient-to-r from-amber-500 to-yellow-400 shadow-amber-500/50'
-                : 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]'
-            }`}
-            style={{ width: `${Math.min(100, stats.capacityPercent)}%` }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between text-[11px] text-neutral-400 mt-2 font-mono">
-          <span>0 (Empty)</span>
-          <span>{Math.round(settings.totalCapacity * 0.5)} (50%)</span>
-          <span>{settings.totalCapacity} (Maximum Capacity)</span>
+        {/* Check-In Velocity */}
+        <div className="bg-[#14100e] border border-[#B08D57]/30 p-3 sm:p-4 shadow-sm">
+          <div className="flex items-center justify-between text-[#B08D57]/80 mb-1.5">
+            <span
+              className="text-[10px] uppercase font-bold tracking-wider font-serif"
+              style={{ fontFamily: "'Cinzel', serif" }}
+            >
+              Velocity
+            </span>
+            <Clock className="w-4 h-4 text-[#B08D57]" />
+          </div>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-[#F5F2EA]">
+            {stats.recentCheckIns?.length || 0}
+          </div>
+          <p className="text-[10px] text-neutral-400 font-serif mt-0.5">Last 10 minutes</p>
         </div>
       </div>
 
-      {/* Admission Breakdown By Ticket Tier */}
-      <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 sm:p-5 shadow-lg">
-        <h3 className="text-xs uppercase font-black tracking-wider text-amber-200 mb-3">
-          Admission Breakdown By Ticket Tier
-        </h3>
+      {/* Category Breakdown */}
+      <div className="bg-[#14100e] border border-[#B08D57]/30 p-4 shadow-sm space-y-3">
+        <h2
+          className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#F5F2EA] font-serif border-b border-[#B08D57]/20 pb-2"
+          style={{ fontFamily: "'Cinzel', serif" }}
+        >
+          Delegation Allocation Breakdown
+        </h2>
 
-        <div className="space-y-3">
-          {categoryStats.map((item) => (
-            <div key={item.category} className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-neutral-200">{item.category}</span>
-                <span className="text-neutral-400 font-mono">
-                  <span className="text-amber-300 font-bold">{item.checked}</span> / {item.total} checked in ({item.percent}%)
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+          {categoryStats.map((cat) => (
+            <div
+              key={cat.category}
+              className="p-3 bg-[#181310] border border-[#B08D57]/20 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className="text-xs font-semibold text-[#F5F2EA] font-serif"
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  {cat.category}
+                </span>
+                <span className="text-xs font-mono font-bold text-[#D4AF37]">
+                  {cat.checked} / {cat.total}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-black rounded-full overflow-hidden border border-neutral-800">
+              <div className="w-full bg-[#100d0a] h-1 mt-2.5 border border-[#B08D57]/20 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    item.category === 'VIP'
-                      ? 'bg-gradient-to-r from-amber-400 to-yellow-300'
-                      : item.category === 'Artist'
-                      ? 'bg-gradient-to-r from-yellow-500 to-amber-600'
-                      : 'bg-amber-500/80'
-                  }`}
-                  style={{ width: `${item.percent}%` }}
+                  className="h-full bg-gradient-to-r from-[#6E4E2E] to-[#B08D57]"
+                  style={{ width: `${cat.percent}%` }}
                 />
               </div>
             </div>
@@ -200,126 +200,78 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* MUN Venue Flow & Live Activity Stream */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Attendance Summary */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs uppercase font-black tracking-wider text-amber-200">
-              MUN Venue Attendance Summary
-            </h3>
-            <MapPin className="w-4 h-4 text-amber-400" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-emerald-500/30 text-xs">
-              <span className="font-semibold text-emerald-300">Currently Inside MUN Venue</span>
-              <span className="font-mono font-bold text-emerald-400">{stats.checkedInCount} attendees</span>
-            </div>
-
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-amber-500/30 text-xs">
-              <span className="font-semibold text-amber-300">Departed (Cleared for Re-Scan)</span>
-              <span className="font-mono font-bold text-amber-400">{stats.leftCount} attendees</span>
-            </div>
-
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-red-500/30 text-xs">
-              <span className="font-semibold text-red-300">Blocked Re-Scan Attempts</span>
-              <span className="font-mono font-bold text-red-400">
-                {logs.filter((l) => l.type === 'DENIED_ATTEMPT').length} blocked
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
-              <span className="font-semibold text-neutral-300">Available Venue Capacity</span>
-              <span className="font-mono font-bold text-neutral-200">{stats.capacityRemaining} slots</span>
-            </div>
-          </div>
+      {/* Recent Security Scan Audit Feed */}
+      <div className="bg-[#14100e] border border-[#B08D57]/30 p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-[#B08D57]/20 pb-2">
+          <h2
+            className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#F5F2EA] font-serif"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Recent Verification Logs
+          </h2>
+          <span className="text-[10px] text-[#B08D57] font-mono">
+            {logs.length} Total Events
+          </span>
         </div>
 
-        {/* Live Timeline Stream */}
-        <div className="bg-gradient-to-b from-neutral-950 to-black border border-amber-500/35 rounded-2xl p-4 shadow-lg flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs uppercase font-black tracking-wider text-amber-200">
-              Live Activity Feed
-            </h3>
-            <Clock className="w-4 h-4 text-amber-400" />
-          </div>
-
+        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
           {logs.length === 0 ? (
-            <p className="text-xs text-neutral-500 py-6 text-center">Waiting for door activity...</p>
+            <div className="text-center py-6 text-xs text-neutral-500 font-serif">
+              No verification scans recorded yet.
+            </div>
           ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {logs.slice(0, 8).map((log) => (
+            logs.slice(0, 15).map((log) => {
+              const isSuccess = log.type === 'CHECK_IN' || log.type === 'RE_ENTRY';
+              const isWarning = log.type === 'CHECK_OUT' || log.type === 'UNDO_CHECK_IN';
+
+              return (
                 <div
                   key={log.id}
-                  className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
-                    log.type === 'CHECK_IN'
-                      ? 'bg-neutral-900 border-amber-500/20'
-                      : log.type === 'RE_ENTRY'
-                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                      : log.type === 'CHECK_OUT'
-                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-                      : log.type === 'UNDO_CHECK_IN'
-                      ? 'bg-neutral-900 border-neutral-700 text-neutral-300'
-                      : log.type === 'SECURITY_FLAG'
-                      ? 'bg-red-950/60 border-2 border-red-500 text-white'
-                      : 'bg-red-950/40 border border-red-500/50 text-red-200'
-                  }`}
+                  className="p-2 sm:p-2.5 bg-[#171310] border border-[#B08D57]/20 flex items-center justify-between gap-2 text-xs"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="font-bold text-white truncate">{log.guestName}</p>
-                      {log.type === 'CHECK_IN' && (
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
-                          Entry
-                        </span>
-                      )}
-                      {log.type === 'RE_ENTRY' && (
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/25 text-emerald-300">
-                          Re-Entry
-                        </span>
-                      )}
-                      {log.type === 'CHECK_OUT' && (
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300">
-                          Departed
-                        </span>
-                      )}
-                      {log.type === 'DENIED_ATTEMPT' && (
-                        <span className="text-[9px] uppercase font-black px-1.5 py-0.2 rounded bg-red-600 text-white">
-                          Re-Scan Blocked
-                        </span>
-                      )}
-                      {log.type === 'SECURITY_FLAG' && (
-                        <span className="text-[9px] uppercase font-black px-1.5 py-0.2 rounded bg-amber-400 text-black">
-                          Security Flag
-                        </span>
-                      )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        isSuccess
+                          ? 'bg-emerald-400'
+                          : isWarning
+                          ? 'bg-amber-400'
+                          : 'bg-red-400'
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-serif font-semibold text-[#F5F2EA] truncate">
+                        {log.guestName}
+                      </div>
+                      <div className="text-[10px] text-neutral-400 font-mono truncate">
+                        {log.ticketId} • {log.scannerName}
+                      </div>
                     </div>
-                    <p className="text-[10px] text-amber-400/80 truncate mt-0.5">
-                      {log.ticketId} • {log.scannerName} • {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    {log.reason && (
-                      <p className="text-[9px] text-neutral-400 italic truncate mt-0.5">{log.reason}</p>
-                    )}
                   </div>
 
-                  {log.type === 'CHECK_IN' && isManagement && (
-                    <button
-                      onClick={() => {
-                        playClickSound();
-                        const found = guests.find((g) => g.ticketId === log.ticketId);
-                        if (found) undoCheckIn(found.id);
-                      }}
-                      className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[10px] text-amber-300 transition cursor-pointer active:scale-95 shrink-0 flex items-center gap-1 border border-neutral-700"
-                      title="Undo check-in"
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] text-[#B08D57] font-mono">
+                      {new Date(log.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })}
+                    </div>
+                    <span
+                      className={`text-[9px] uppercase font-serif tracking-wider ${
+                        isSuccess
+                          ? 'text-emerald-400'
+                          : isWarning
+                          ? 'text-amber-300'
+                          : 'text-red-400'
+                      }`}
                     >
-                      <RotateCcw className="w-3 h-3 text-amber-400" />
-                      <span>Undo</span>
-                    </button>
-                  )}
+                      {log.type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
         </div>
       </div>

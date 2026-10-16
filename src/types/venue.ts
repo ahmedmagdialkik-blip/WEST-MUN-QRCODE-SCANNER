@@ -142,9 +142,9 @@ export const ROLE_LABELS: Record<StaffRole, { title: string; badge: string; desc
     canScan: true,
   },
   it: {
-    title: 'IT & Technical',
-    badge: 'IT Scanner & Tech Lead',
-    description: 'Active camera scanner, system technical controls, and ability to add members to the IT team.',
+    title: 'Admin of IT & Systems',
+    badge: 'Admin of IT & Scanner',
+    description: 'Active camera scanner, venue technical administration, door verification, and IT team management.',
     canScan: true,
   },
   designers: {
