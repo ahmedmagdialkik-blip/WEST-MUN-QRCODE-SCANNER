@@ -1,53 +1,50 @@
 import React, { useState } from 'react';
 import { useVenue } from '../../context/VenueContext';
-import { StaffRole } from '../../types/venue';
+import { StaffRole, ROLE_LABELS } from '../../types/venue';
 import {
-  Lock,
   Mail,
   User,
   ArrowRight,
-  Eye,
-  EyeOff,
   Crown,
   KeyRound,
   X,
   Shield,
+  CheckCircle2,
 } from 'lucide-react';
-import { playClickSound } from '../../utils/audio';
+import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
 
 interface AuthModalProps {
   onClose?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
-  const { login, register, isAuthenticated } = useVenue();
+  const { authenticateByIdentifier, register, isAuthenticated, staffMembers, switchAccountFast } = useVenue();
 
-  const [mode, setMode] = useState<'signin' | 'register'>('signin');
+  const [mode, setMode] = useState<'signin' | 'register' | 'switch'>('signin');
   const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Registration state
+  // Registration state (Password-free)
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState<StaffRole>('security');
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!identifier.trim() || !password.trim()) {
-      setErrorMessage('Please enter both your account identifier and password.');
+    if (!identifier.trim()) {
+      setErrorMessage('Please enter your official delegate identifier or email.');
       return;
     }
 
     playClickSound();
-    const result = login(identifier.trim(), password.trim());
+    const result = authenticateByIdentifier(identifier.trim());
     if (!result.success) {
-      setErrorMessage(result.error || 'Authentication rejected. Check your credentials.');
+      playWarningBuzzer();
+      setErrorMessage(result.error || 'Authentication rejected. Check your credential identifier.');
     } else {
+      playSuccessChime();
       if (onClose) onClose();
     }
   };
@@ -56,7 +53,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!regName.trim() || !regEmail.trim() || !regPassword.trim()) {
+    if (!regName.trim() || !regEmail.trim()) {
       setErrorMessage('Please complete all registration fields.');
       return;
     }
@@ -69,7 +66,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     const result = register({
       name: regName.trim(),
       email: regEmail.trim(),
-      password: regPassword.trim(),
       role: regRole,
       accessKey: pin,
       assignedGate: 'MUN Venue',
@@ -83,18 +79,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     });
 
     if (!result.success) {
-      setErrorMessage(result.error || 'Failed to create account.');
+      playWarningBuzzer();
+      setErrorMessage(result.error || 'Failed to register credential.');
     } else {
+      playSuccessChime();
       if (onClose) onClose();
     }
+  };
+
+  const handleQuickSwitch = (staffId: string) => {
+    playClickSound();
+    switchAccountFast(staffId);
+    if (onClose) onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-[#161210] border border-[#B08D57]/45 rounded-md shadow-[0_10px_40px_rgba(0,0,0,0.9)] p-5 sm:p-6 text-[#F5F2EA] relative overflow-hidden my-auto">
-        {/* Optional Close Button if already logged in */}
-        {isAuthenticated && onClose && (
+        {/* Optional Close Button */}
+        {onClose && (
           <button
+            type="button"
             onClick={() => {
               playClickSound();
               onClose();
@@ -117,19 +122,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             WEST MUN
           </h1>
           <p
-            className="text-[10px] uppercase tracking-[0.24em] text-[#B08D57] mt-0.5"
+            className="text-[10px] uppercase tracking-[0.24em] text-[#B08D57] mt-0.5 font-serif"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Executive & Diplomatic Credential Portal
+            Diplomatic Credential Verification
           </p>
-          <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-xs bg-[#1f1712] border border-[#B08D57]/30 text-[10px] text-neutral-300 font-serif">
-            <Lock className="w-3 h-3 text-[#B08D57] shrink-0" />
-            <span>Authorized Delegates & Officers • Confidential Access</span>
-          </div>
         </div>
 
-        {/* Sign In vs Register Tabs */}
-        <div className="flex bg-[#100d0b] border border-[#B08D57]/30 rounded-xs p-1 mb-4">
+        {/* Tab Controls */}
+        <div className="flex bg-[#100d0b] border border-[#B08D57]/30 rounded-xs p-1 mb-4 text-xs font-serif">
           <button
             type="button"
             onClick={() => {
@@ -137,14 +138,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setMode('signin');
               setErrorMessage(null);
             }}
-            className={`flex-1 py-1.5 text-xs font-serif uppercase tracking-wider rounded-xs transition cursor-pointer ${
+            className={`flex-1 py-1.5 text-xs uppercase tracking-wider rounded-xs transition cursor-pointer ${
               mode === 'signin'
                 ? 'bg-[#6E4E2E] text-[#F5F2EA] shadow-sm border border-[#B08D57]/60 font-bold'
                 : 'text-neutral-400 hover:text-white'
             }`}
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Staff Sign In
+            Verify ID
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setMode('switch');
+              setErrorMessage(null);
+            }}
+            className={`flex-1 py-1.5 text-xs uppercase tracking-wider rounded-xs transition cursor-pointer ${
+              mode === 'switch'
+                ? 'bg-[#6E4E2E] text-[#F5F2EA] shadow-sm border border-[#B08D57]/60 font-bold'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Quick Switch
           </button>
           <button
             type="button"
@@ -153,14 +170,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setMode('register');
               setErrorMessage(null);
             }}
-            className={`flex-1 py-1.5 text-xs font-serif uppercase tracking-wider rounded-xs transition cursor-pointer ${
+            className={`flex-1 py-1.5 text-xs uppercase tracking-wider rounded-xs transition cursor-pointer ${
               mode === 'register'
                 ? 'bg-[#6E4E2E] text-[#F5F2EA] shadow-sm border border-[#B08D57]/60 font-bold'
                 : 'text-neutral-400 hover:text-white'
             }`}
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Register Pass
+            Register
           </button>
         </div>
 
@@ -170,45 +187,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Sign In Form */}
-        {mode === 'signin' ? (
-          <form onSubmit={handleSignIn} className="space-y-3.5">
+        {/* Mode 1: Sign In by Credential Identifier (Password-Free) */}
+        {mode === 'signin' && (
+          <form onSubmit={handleSignIn} className="space-y-3.5" autoComplete="off">
             <div>
               <label className="block text-xs font-serif text-[#B08D57] mb-1">
-                Username / Email / Access PIN
+                Official Identifier or Delegate Email
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
                 <input
                   type="text"
                   required
-                  placeholder="Enter assigned username or official email"
+                  placeholder="e.g. AhmedMagdi or delegate email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
                 />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-serif text-[#B08D57] mb-1">Confidential Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter assigned confidential password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-9 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-amber-400 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
               </div>
             </div>
 
@@ -217,13 +215,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               className="w-full py-2.5 px-4 rounded-xs bg-[#6E4E2E] hover:bg-[#B08D57] text-[#F5F2EA] font-serif text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-95"
             >
               <KeyRound className="w-3.5 h-3.5 text-[#B08D57]" />
-              <span>Sign In to West MUN</span>
+              <span>Authenticate Session</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
-        ) : (
-          /* Register Form */
-          <form onSubmit={handleRegister} className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+        )}
+
+        {/* Mode 2: Quick Mission Account Switcher */}
+        {mode === 'switch' && (
+          <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
+            <p className="text-[11px] text-[#A8A196] font-serif italic mb-2">
+              Select accredited diplomatic delegate:
+            </p>
+            {staffMembers.slice(0, 8).map((staff) => (
+              <button
+                key={staff.id}
+                type="button"
+                onClick={() => handleQuickSwitch(staff.id)}
+                className="w-full p-2 rounded-xs border border-neutral-800 hover:border-[#B08D57]/50 bg-[#100d0b] hover:bg-[#1A1512] flex items-center justify-between text-left transition cursor-pointer"
+              >
+                <div>
+                  <span className="text-xs font-serif text-[#F5F2EA] font-bold block">
+                    {staff.name}
+                  </span>
+                  <span className="text-[9px] text-[#A8A196] font-serif block">
+                    {ROLE_LABELS[staff.role]?.title}
+                  </span>
+                </div>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-xs bg-[#B08D57]/20 text-[#E5C578] font-serif uppercase">
+                  Switch
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Mode 3: Register Delegate Pass (Password-Free) */}
+        {mode === 'register' && (
+          <form onSubmit={handleRegister} className="space-y-3 max-h-[50vh] overflow-y-auto pr-1" autoComplete="off">
             <div>
               <label className="block text-xs font-serif text-[#B08D57] mb-1">Full Name *</label>
               <div className="relative">
@@ -234,13 +263,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                   placeholder="e.g. Delegate Name"
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
+                  autoComplete="off"
                   className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-serif text-[#B08D57] mb-1">Email / Username *</label>
+              <label className="block text-xs font-serif text-[#B08D57] mb-1">Email / Identifier *</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
                 <input
@@ -249,21 +279,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                   placeholder="e.g. delegate@westmun.org"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-serif text-[#B08D57] mb-1">Password *</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                <input
-                  type="password"
-                  required
-                  placeholder="Create confidential password"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
+                  autoComplete="off"
                   className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
                 />
               </div>
@@ -301,7 +317,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               type="submit"
               className="w-full py-2.5 px-4 rounded-xs bg-[#6E4E2E] hover:bg-[#B08D57] text-[#F5F2EA] font-serif text-xs uppercase tracking-wider transition cursor-pointer shadow-sm active:scale-95"
             >
-              Register & Sign In
+              Issue Credential & Sign In
             </button>
           </form>
         )}
@@ -313,13 +329,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             style={{
               fontFamily: "'Cormorant Garamond', serif",
               color: '#B08D57',
-              opacity: 0.18,
+              opacity: 0.22,
             }}
           >
             Developed by Ahmed Magdi
           </span>
           <span className="text-[8px] text-[#B08D57]/40 tracking-wider uppercase font-serif mt-0.5">
-            West Mun Venue Access Control & Ticket Security
+            West MUN Venue Access Control & Ticket Security
           </span>
         </div>
       </div>

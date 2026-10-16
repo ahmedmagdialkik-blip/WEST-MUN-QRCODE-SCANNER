@@ -23,7 +23,8 @@ interface VenueContextType {
   lastScanResult: ScanResult | null;
   activeTab: 'scanner' | 'dashboard' | 'guestlist' | 'team';
   setActiveTab: (tab: 'scanner' | 'dashboard' | 'guestlist' | 'team') => void;
-  login: (identifier: string, pass: string) => { success: boolean; error?: string };
+  login: (identifier: string, pass?: string) => { success: boolean; user?: StaffMember; error?: string };
+  authenticateByIdentifier: (identifier: string) => { success: boolean; error?: string; user?: StaffMember };
   register: (staffData: Omit<StaffMember, 'id'>) => { success: boolean; error?: string };
   logout: () => void;
   switchAccountFast: (staffId: string) => void;
@@ -56,11 +57,11 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'west_mun_guests_v9_redgold';
-const STORAGE_KEY_STAFF = 'west_mun_staff_v9_redgold';
-const STORAGE_KEY_SETTINGS = 'west_mun_settings_v9_redgold';
-const STORAGE_KEY_LOGS = 'west_mun_logs_v9_redgold';
-const STORAGE_KEY_AUTH = 'west_mun_auth_v9_redgold';
+const STORAGE_KEY_GUESTS = 'west_mun_guests_v10_mozart';
+const STORAGE_KEY_STAFF = 'west_mun_staff_v10_mozart';
+const STORAGE_KEY_SETTINGS = 'west_mun_settings_v10_mozart';
+const STORAGE_KEY_LOGS = 'west_mun_logs_v10_mozart';
+const STORAGE_KEY_AUTH = 'west_mun_auth_v10_mozart';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -84,6 +85,7 @@ const INITIAL_STAFF: StaffMember[] = [
     id: 'staff-it-ahmed',
     name: 'Ahmed Magdi',
     email: 'AhmedMagdi',
+    customTitle: 'Admin of IT & Head of Systems',
     password: '344',
     role: 'it',
     accessKey: '344',
@@ -1167,36 +1169,49 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Account Authentication methods
-  const login = useCallback(
-    (identifier: string, pass: string): { success: boolean; error?: string } => {
+  // Password-Free Diplomatic Authentication method
+  const authenticateByIdentifier = useCallback(
+    (identifier: string): { success: boolean; error?: string; user?: StaffMember } => {
       const cleanId = identifier.trim().toLowerCase();
-      const cleanPass = pass.trim();
-
-      if (!cleanId || !cleanPass) {
+      if (!cleanId) {
         return {
           success: false,
-          error: 'Please enter both your name/email and confidential password.',
+          error: 'Please enter your diplomatic email or delegate identifier.',
         };
       }
 
-      // Special check for Admin of IT AhmedMagdi
+      // Dedicated recognition for Admin of IT AhmedMagdi
       const isAhmedMagdi =
         cleanId === 'ahmedmagdi' ||
         cleanId === 'ahmed magdi' ||
+        cleanId === 'ahmed' ||
         cleanId === 'ahmed.magdi' ||
-        cleanId === 'ahmedmagdi@munvenue.org';
+        cleanId === 'ahmedmagdialkik@gmail.com' ||
+        cleanId.replace(/\s+/g, '') === 'ahmedmagdi';
 
       const user = staffMembers.find((s) => {
-        if (isAhmedMagdi && s.role === 'it') return true;
-        const sEmail = s.email.toLowerCase();
-        const sName = s.name.toLowerCase();
+        if (
+          isAhmedMagdi &&
+          (s.id === 'staff-it-ahmed' ||
+            s.name.toLowerCase().includes('ahmed magdi') ||
+            s.email.toLowerCase() === 'ahmedmagdi')
+        ) {
+          return true;
+        }
+
+        const sEmail = (s.email || '').toLowerCase();
+        const sName = (s.name || '').toLowerCase();
         const sNormalizedName = sName.replace(/\s+/g, '');
         const sKey = (s.accessKey || '').toLowerCase();
         const sTicket = (s.ticketId || '').toLowerCase();
+
+        const sFirstName = sName.split(' ')[0];
+
         return (
           sEmail === cleanId ||
           sName === cleanId ||
           sNormalizedName === cleanId.replace(/\s+/g, '') ||
+          sFirstName === cleanId ||
           sKey === cleanId ||
           sTicket === cleanId
         );
@@ -1205,9 +1220,43 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!user) {
         return {
           success: false,
-          error: 'Account not found. Please check your assigned email or username in the credentials directory.',
+          error: 'Diplomatic credential not found on the accredited roster. Please verify your official email or delegate ID.',
         };
       }
+
+      if (!user.isActive) {
+        return {
+          success: false,
+          error: 'This credential account has been deactivated by the Secretariat.',
+        };
+      }
+
+      setCurrentUser(user);
+      return { success: true, user };
+    },
+    [staffMembers]
+  );
+
+  // General login method validating username & confidential password
+  const login = useCallback(
+    (identifier: string, pass?: string): { success: boolean; user?: StaffMember; error?: string } => {
+      const authResult = authenticateByIdentifier(identifier);
+      if (!authResult.success) {
+        return authResult;
+      }
+
+      const user = authResult.user!;
+      if (!pass || !pass.trim()) {
+        return {
+          success: false,
+          error: 'Please enter your confidential password.',
+        };
+      }
+
+      const cleanPass = pass.trim();
+      const isAhmedMagdi =
+        identifier.toLowerCase().replace(/\s+/g, '') === 'ahmedmagdi' ||
+        identifier.toLowerCase().includes('ahmedmagdialkik');
 
       const passMatches =
         user.password === cleanPass ||
@@ -1217,21 +1266,14 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!passMatches) {
         return {
           success: false,
-          error: `Incorrect password for ${user.name}. Please enter the password assigned to your account.`,
-        };
-      }
-
-      if (!user.isActive) {
-        return {
-          success: false,
-          error: 'This account has been deactivated by Security administration.',
+          error: `Incorrect confidential password for ${user.name}.`,
         };
       }
 
       setCurrentUser(user);
-      return { success: true };
+      return { success: true, user };
     },
-    [staffMembers]
+    [authenticateByIdentifier]
   );
 
   const register = useCallback(
@@ -1939,6 +1981,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeTab,
         setActiveTab,
         login,
+        authenticateByIdentifier,
         register,
         logout,
         switchAccountFast,

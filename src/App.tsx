@@ -17,10 +17,11 @@ import { ScanFeedbackOverlay } from './components/Scanner/ScanFeedbackOverlay';
 import { AuthModal } from './components/Auth/AuthModal';
 import { LuxuryIntro } from './components/Intro/LuxuryIntro';
 import { ExecutiveLoginPage } from './components/Auth/ExecutiveLoginPage';
+import { VoiceWelcomeScreen } from './components/Welcome/VoiceWelcomeScreen';
 import { FaceIdModal } from './components/Biometrics/FaceIdModal';
-import { isScannerOrAdminRole } from './types/venue';
+import { isScannerOrAdminRole, StaffMember } from './types/venue';
 
-type AppFlowStage = 'login' | 'intro' | 'homepage';
+type AppFlowStage = 'login' | 'welcome' | 'intro' | 'homepage';
 
 function MainVenueContent() {
   const {
@@ -32,17 +33,23 @@ function MainVenueContent() {
     clearLastScanResult,
   } = useVenue();
 
-  // Authentication Flow Requirements:
-  // If NOT authenticated: Login Page -> Face Recognition -> Simple Intro -> Homepage
-  // If IS authenticated: Homepage (skip intro and login)
-  // Store authentication using localStorage
-  // Do not replay the intro unless the user logs out and signs in again
+  // Track if this is a fresh login (so we know to play Intro after Welcome)
+  const [isFreshLogin, setIsFreshLogin] = useState<boolean>(false);
+
+  // Exact Flow Requirements:
+  // If NOT logged in:
+  //   Website Opens -> Premium Login Page -> Authenticate -> Voice Welcome Screen -> Simple Intro Animation -> Homepage
+  // If user IS already logged in:
+  //   Website Opens -> Voice Welcome Screen -> Homepage
+  // * The homepage should NEVER appear before the welcome screen.
   const [flowStage, setFlowStage] = useState<AppFlowStage>(() => {
     try {
       const isSaved = localStorage.getItem('west_mun_auth_session') === 'authenticated';
-      const savedAuthId = localStorage.getItem('west_mun_auth_v9_redgold');
+      const savedAuthId = localStorage.getItem('west_mun_auth_v10_mozart');
       if (isSaved && savedAuthId) {
-        return 'homepage';
+        // User already has an authenticated session:
+        // Must show Voice Welcome Screen first before homepage!
+        return 'welcome';
       }
     } catch {
       // ignore
@@ -54,56 +61,80 @@ function MainVenueContent() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isFaceIdOpen, setIsFaceIdOpen] = useState(false);
 
-  // Sync state if user logs out
+  // Reset to login if user logs out
   useEffect(() => {
-    if (!isAuthenticated && flowStage === 'homepage') {
+    if (!isAuthenticated && (flowStage === 'homepage' || flowStage === 'welcome')) {
       try {
         localStorage.removeItem('west_mun_auth_session');
       } catch {
         // ignore
       }
       setFlowStage('login');
+      setIsFreshLogin(false);
     }
   }, [isAuthenticated, flowStage]);
 
-  // Handle successful login (from real facial recognition or manual pass)
-  const handleAuthenticationSuccess = () => {
+  // Handle successful authentication from ExecutiveLoginPage
+  const handleAuthenticationSuccess = (user: StaffMember) => {
     try {
       localStorage.setItem('west_mun_auth_session', 'authenticated');
-      localStorage.setItem('west_mun_auth_v9_redgold', 'staff-it-ahmed');
     } catch {
       // ignore
     }
 
-    // Authenticate as Ahmed Magdi (Head of IT & Security Systems)
-    switchAccountFast('staff-it-ahmed');
+    switchAccountFast(user.id);
+    setIsFreshLogin(true);
 
-    // Proceed to simple luxury intro (2–3 seconds Apple/Rolex style)
-    setFlowStage('intro');
+    // Sequence: Authenticate -> Voice Welcome Screen -> Simple Intro -> Homepage
+    setFlowStage('welcome');
   };
 
-  // 1. Stage: Executive Login Page with Real Facial Recognition
-  if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'intro')) {
+  // 1. Stage: Premium Login Page (When not authenticated)
+  if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'welcome' && flowStage !== 'intro')) {
     return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
   }
 
-  // 2. Stage: Simple Luxury Intro Animation (2–3s)
+  // 2. Stage: Voice Welcome Screen (Always shown on login or on page open with active session)
+  if (flowStage === 'welcome') {
+    if (!currentUser) {
+      // Fallback safeguard if user state hasn't resolved
+      return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
+    }
+
+    return (
+      <VoiceWelcomeScreen
+        user={currentUser}
+        onComplete={() => {
+          if (isFreshLogin) {
+            // Fresh login: proceed to Simple Intro Animation (2–3s)
+            setFlowStage('intro');
+          } else {
+            // Already logged-in user reopening website: proceed directly to Homepage
+            setFlowStage('homepage');
+          }
+        }}
+      />
+    );
+  }
+
+  // 3. Stage: Simple Minimalist Luxury Intro Animation (2–3s Apple/Rolex style)
   if (flowStage === 'intro') {
     return (
       <LuxuryIntro
         onComplete={() => {
+          setIsFreshLogin(false);
           setFlowStage('homepage');
         }}
       />
     );
   }
 
-  // 3. Stage: Homepage (Executive Portal)
+  // 4. Stage: Homepage (Executive Portal) - Only reached after Welcome Screen!
   const isAuthorizedScanner = currentUser ? isScannerOrAdminRole(currentUser.role) : false;
 
   return (
-    <div className="min-h-screen bg-[#0e0c0a] text-[#F5F2EA] flex flex-col font-sans selection:bg-amber-900 selection:text-amber-200 animate-in fade-in duration-500 overflow-x-hidden">
-      {/* Handcrafted Diplomatic Header with Mobile Hamburger Menu */}
+    <div className="min-h-screen bg-[#0A0908] text-[#F5F2EA] flex flex-col font-sans selection:bg-[#B08D57]/30 selection:text-[#E5C578] animate-in fade-in duration-500 overflow-x-hidden">
+      {/* Handcrafted Diplomatic Header with Mobile Navigation */}
       <Header
         onOpenTestBadges={() => setIsTestBadgesOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -132,12 +163,12 @@ function MainVenueContent() {
         <span
           className="text-[9px] sm:text-[10px] uppercase tracking-[0.28em] italic select-none"
           style={{
-            fontFamily: "'Cormorant Garamond', 'Cardo', serif",
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
             color: '#B08D57',
-            opacity: 0.18,
+            opacity: 0.22,
           }}
         >
-          Developed by Ahmed Magdi
+          Western Model United Nations • Developed by Ahmed Magdi
         </span>
       </footer>
 

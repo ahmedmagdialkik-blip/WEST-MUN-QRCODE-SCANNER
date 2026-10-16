@@ -55,6 +55,8 @@ export interface StaffMember {
   accessKey: string;
   assignedGate: string;
   ticketId?: string; // Scannable QR code ticket ID for staff pass
+  avatarUrl?: string; // Optional portrait photo for welcome screen & credential
+  customTitle?: string; // Optional custom designation (e.g. 'Admin of IT')
   canScan: boolean;
   canManualCheckIn: boolean;
   canRevokeCheckIn: boolean;
