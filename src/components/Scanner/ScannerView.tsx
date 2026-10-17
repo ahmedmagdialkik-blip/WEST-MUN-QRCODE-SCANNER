@@ -23,7 +23,6 @@ import {
   ScanFace,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
-import { FaceIdModal } from '../Biometrics/FaceIdModal';
 
 export const ScannerView: React.FC = () => {
   const {
@@ -48,7 +47,6 @@ export const ScannerView: React.FC = () => {
   const [hasTorchCapability, setHasTorchCapability] = useState(false);
   const [manualCodeInput, setManualCodeInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isFaceIdOpen, setIsFaceIdOpen] = useState(false);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -289,40 +287,6 @@ export const ScannerView: React.FC = () => {
         </div>
       </div>
 
-      {/* FACE ID BIOMETRICS ACCESS BANNER */}
-      <div className="w-full mb-3 p-3 rounded-md bg-[#181310] border border-[#B08D57]/50 shadow-md flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-[#241a14] border border-[#B08D57]/40 flex items-center justify-center text-[#B08D57] shadow-sm shrink-0">
-            <ScanFace className="w-5 h-5 text-[#B08D57]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span
-                className="text-xs font-bold text-[#F5F2EA] uppercase tracking-wider font-serif"
-                style={{ fontFamily: "'Cinzel', serif" }}
-              >
-                Face ID Biometric Scanner
-              </span>
-              <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-xs bg-[#2b2018] text-[#B08D57] border border-[#B08D57]/30 font-mono">
-                Active
-              </span>
-            </div>
-            <p className="text-[11px] text-[#B08D57]/80 font-serif">
-              Scan Ahmed Magdi's registered face for instant executive check-in
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            playClickSound();
-            setIsFaceIdOpen(true);
-          }}
-          className="px-3.5 py-2 rounded-md bg-[#6E4E2E] hover:bg-[#B08D57] text-[#F5F2EA] font-serif text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95 shrink-0"
-        >
-          Scan Face ID
-        </button>
-      </div>
 
       {/* Main Scanner Card */}
       <div className="w-full bg-[#161210] border border-[#B08D57]/40 rounded-md p-4 shadow-[0_4px_24px_rgba(0,0,0,0.8)] relative overflow-hidden">
@@ -537,12 +501,7 @@ export const ScannerView: React.FC = () => {
         </div>
       </div>
 
-      {/* Face ID Biometric Scanner Modal */}
-      <FaceIdModal
-        isOpen={isFaceIdOpen}
-        onClose={() => setIsFaceIdOpen(false)}
-        scanMode={scanMode}
-      />
+
     </div>
   );
 };

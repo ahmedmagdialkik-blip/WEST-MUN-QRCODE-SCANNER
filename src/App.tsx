@@ -16,10 +16,10 @@ import { TestTicketBadges } from './components/Scanner/TestTicketBadges';
 import { ScanFeedbackOverlay } from './components/Scanner/ScanFeedbackOverlay';
 import { AuthModal } from './components/Auth/AuthModal';
 import { LuxuryIntro } from './components/Intro/LuxuryIntro';
-import { ExecutiveLoginPage } from './components/Auth/ExecutiveLoginPage';
 import { VoiceWelcomeScreen } from './components/Welcome/VoiceWelcomeScreen';
-import { FaceIdModal } from './components/Biometrics/FaceIdModal';
-import { isScannerOrAdminRole, StaffMember } from './types/venue';
+import { ExecutivePortalLogin } from './components/auth/ExecutivePortalLogin';
+import { EnrolledUser } from './auth/types';
+import { isScannerOrAdminRole, StaffMember, ROLE_LABELS } from './types/venue';
 
 type AppFlowStage = 'login' | 'welcome' | 'intro' | 'homepage';
 
@@ -29,26 +29,20 @@ function MainVenueContent() {
     isAuthenticated,
     currentUser,
     switchAccountFast,
+    loginAsStaffMember,
     lastScanResult,
     clearLastScanResult,
+    staffMembers,
   } = useVenue();
 
-  // Track if this is a fresh login (so we know to play Intro after Welcome)
   const [isFreshLogin, setIsFreshLogin] = useState<boolean>(false);
 
-  // Exact Flow Requirements:
-  // If NOT logged in:
-  //   Website Opens -> Premium Login Page -> Authenticate -> Voice Welcome Screen -> Simple Intro Animation -> Homepage
-  // If user IS already logged in:
-  //   Website Opens -> Voice Welcome Screen -> Homepage
-  // * The homepage should NEVER appear before the welcome screen.
+  // Flow Stages: login -> welcome -> intro -> homepage
   const [flowStage, setFlowStage] = useState<AppFlowStage>(() => {
     try {
       const isSaved = localStorage.getItem('west_mun_auth_session') === 'authenticated';
       const savedAuthId = localStorage.getItem('west_mun_auth_v10_mozart');
       if (isSaved && savedAuthId) {
-        // User already has an authenticated session:
-        // Must show Voice Welcome Screen first before homepage!
         return 'welcome';
       }
     } catch {
@@ -59,7 +53,6 @@ function MainVenueContent() {
 
   const [isTestBadgesOpen, setIsTestBadgesOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isFaceIdOpen, setIsFaceIdOpen] = useState(false);
 
   // Reset to login if user logs out
   useEffect(() => {
@@ -74,31 +67,65 @@ function MainVenueContent() {
     }
   }, [isAuthenticated, flowStage]);
 
-  // Handle successful authentication from ExecutiveLoginPage
-  const handleAuthenticationSuccess = (user: StaffMember) => {
+  // Handle successful multi-user authentication (QR Code, Email, or Face ID)
+  const handleAuthenticationSuccess = (user: EnrolledUser) => {
     try {
       localStorage.setItem('west_mun_auth_session', 'authenticated');
     } catch {
       // ignore
     }
 
-    switchAccountFast(user.id);
-    setIsFreshLogin(true);
+    const cleanEmail = (user.email || '').toLowerCase().trim();
+    const cleanName = (user.fullName || '').toLowerCase().trim();
 
-    // Sequence: Authenticate -> Voice Welcome Screen -> Simple Intro -> Homepage
+    // Dynamically match specific user profile
+    const foundStaff = staffMembers.find((s) => {
+      return (
+        s.id === user.id ||
+        (cleanEmail && s.email.toLowerCase() === cleanEmail) ||
+        (cleanName && s.name.toLowerCase() === cleanName)
+      );
+    });
+
+    if (foundStaff) {
+      loginAsStaffMember(foundStaff);
+    } else {
+      // Create session for authenticated user
+      const canScan = isScannerOrAdminRole(user.role);
+      const newStaff: StaffMember = {
+        id: user.id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role || 'executive',
+        customTitle: user.role ? ROLE_LABELS[user.role]?.title : 'Diplomatic Delegate',
+        assignedGate: 'MUN Venue',
+        ticketId: user.ticketId || `MUN-${(user.role || 'EXEC').substring(0, 3).toUpperCase()}-01`,
+        accessKey: '1000',
+        canScan,
+        canManualCheckIn: canScan,
+        canRevokeCheckIn: canScan,
+        canManageStaff: canScan,
+        canExportData: true,
+        isActive: true,
+        lastActiveTime: new Date().toISOString(),
+      };
+      loginAsStaffMember(newStaff);
+    }
+
+    setIsFreshLogin(true);
+    // Sequence: Authenticate -> Personalized Welcome Screen -> Intro -> Homepage
     setFlowStage('welcome');
   };
 
-  // 1. Stage: Premium Login Page (When not authenticated)
+  // 1. Stage: Executive Portal Authentication Screen (Default Email, Face ID on demand, QR Code)
   if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'welcome' && flowStage !== 'intro')) {
-    return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
+    return <ExecutivePortalLogin onAuthenticated={handleAuthenticationSuccess} />;
   }
 
-  // 2. Stage: Voice Welcome Screen (Always shown on login or on page open with active session)
+  // 2. Stage: Executive Welcome Screen (Silent, animated text only)
   if (flowStage === 'welcome') {
     if (!currentUser) {
-      // Fallback safeguard if user state hasn't resolved
-      return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
+      return <ExecutivePortalLogin onAuthenticated={handleAuthenticationSuccess} />;
     }
 
     return (
@@ -106,10 +133,10 @@ function MainVenueContent() {
         user={currentUser}
         onComplete={() => {
           if (isFreshLogin) {
-            // Fresh login: proceed to Simple Intro Animation (2–3s)
+            // Fresh login: proceed to Intro Animation (2–3s)
             setFlowStage('intro');
           } else {
-            // Already logged-in user reopening website: proceed directly to Homepage
+            // Already logged in: proceed directly to Homepage
             setFlowStage('homepage');
           }
         }}
@@ -117,7 +144,7 @@ function MainVenueContent() {
     );
   }
 
-  // 3. Stage: Simple Minimalist Luxury Intro Animation (2–3s Apple/Rolex style)
+  // 3. Stage: Luxury Intro Animation (with clear "Developed by Ahmed Magdi" signature)
   if (flowStage === 'intro') {
     return (
       <LuxuryIntro
@@ -129,17 +156,16 @@ function MainVenueContent() {
     );
   }
 
-  // 4. Stage: Homepage (Executive Portal) - Only reached after Welcome Screen!
+  // 4. Stage: Homepage (Executive Portal) - Only reached after authentication & welcome!
   const isAuthorizedScanner = currentUser ? isScannerOrAdminRole(currentUser.role) : false;
 
   return (
     <div className="min-h-screen bg-[#0A0908] text-[#F5F2EA] flex flex-col font-sans selection:bg-[#B08D57]/30 selection:text-[#E5C578] animate-in fade-in duration-500 overflow-x-hidden">
-      {/* Handcrafted Diplomatic Header with Mobile Navigation */}
+      {/* Handcrafted Diplomatic Header */}
       <Header
         onOpenTestBadges={() => setIsTestBadgesOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onReplayIntro={() => setFlowStage('intro')}
-        onOpenFaceId={() => setIsFaceIdOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -158,7 +184,7 @@ function MainVenueContent() {
         )}
       </main>
 
-      {/* Developer Signature Footer - subtle artist signature (~18% opacity, antique gold) */}
+      {/* Developer Signature Footer */}
       <footer className="w-full py-4 text-center z-10 select-none pb-24">
         <span
           className="text-[9px] sm:text-[10px] uppercase tracking-[0.28em] italic select-none"
@@ -172,10 +198,10 @@ function MainVenueContent() {
         </span>
       </footer>
 
-      {/* Bottom Sticky Navigation: Strictly restricted to Security and Admins (Mobile-friendly) */}
+      {/* Bottom Sticky Navigation: Strictly restricted to Security and Admins */}
       {isAuthorizedScanner && <BottomNav />}
 
-      {/* Full-Screen Scan Result Audio & Visual Feedback Overlay */}
+      {/* Full-Screen Scan Result Feedback */}
       {lastScanResult && (
         <ScanFeedbackOverlay
           result={lastScanResult}
@@ -191,12 +217,6 @@ function MainVenueContent() {
 
       {/* Account Authentication Switcher Modal */}
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
-
-      {/* Global Face ID Biometric Check-In Modal */}
-      <FaceIdModal
-        isOpen={isFaceIdOpen}
-        onClose={() => setIsFaceIdOpen(false)}
-      />
     </div>
   );
 }

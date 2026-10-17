@@ -28,6 +28,7 @@ interface VenueContextType {
   register: (staffData: Omit<StaffMember, 'id'>) => { success: boolean; error?: string };
   logout: () => void;
   switchAccountFast: (staffId: string) => void;
+  loginAsStaffMember: (member: StaffMember) => void;
   processScan: (rawCode: string, mode?: 'entry' | 'exit') => ScanResult;
   markGuestLeft: (guestId: string) => boolean;
   manualCheckIn: (guestId: string) => boolean;
@@ -80,16 +81,36 @@ const DEFAULT_SETTINGS: VenueSettings = {
 // Both IT and Security members have the ability to add members to their team.
 // All other roles (Design, Media, PR, HR, etc.) have their personal scannable QR Pass.
 const INITIAL_STAFF: StaffMember[] = [
-  // IT Team (Admin of IT: AhmedMagdi - pass: 344)
+  // Executive Leadership (Sarah Johnson)
   {
-    id: 'staff-it-ahmed',
+    id: 'usr-sarah-johnson-uuid-8812',
+    name: 'Sarah Johnson',
+    email: 'sarah.johnson@westmun.org',
+    customTitle: 'Executive Board Vice President',
+    password: 'exec8812',
+    role: 'executive',
+    accessKey: '8812',
+    assignedGate: 'Executive Chamber',
+    ticketId: 'MUN-EXEC-08',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // IT Team (Admin of IT: Ahmed Magdi)
+  {
+    id: 'usr-ahmed-magdi-uuid-1049',
     name: 'Ahmed Magdi',
-    email: 'AhmedMagdi',
+    email: 'ahmed.magdi@westmun.org',
     customTitle: 'Admin of IT & Head of Systems',
     password: '344',
     role: 'it',
     accessKey: '344',
-    assignedGate: 'MUN Venue',
+    assignedGate: 'Security & Tech Hub',
     ticketId: 'MUN-IT-01',
     canScan: true,
     canManualCheckIn: true,
@@ -108,6 +129,26 @@ const INITIAL_STAFF: StaffMember[] = [
     accessKey: '6002',
     assignedGate: 'MUN Venue',
     ticketId: 'MUN-IT-02',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Security Team (John Smith - Chief Security Officer)
+  {
+    id: 'usr-john-smith-uuid-3914',
+    name: 'John Smith',
+    email: 'john.smith@westmun.org',
+    customTitle: 'Chief Security Officer',
+    password: 'sec3914',
+    role: 'security',
+    accessKey: '3914',
+    assignedGate: 'Diplomatic Main Gate',
+    ticketId: 'MUN-SEC-01',
     canScan: true,
     canManualCheckIn: true,
     canRevokeCheckIn: true,
@@ -1344,6 +1385,23 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [staffMembers]
   );
 
+  const loginAsStaffMember = useCallback(
+    (member: StaffMember) => {
+      setStaffMembers((prev) => {
+        const index = prev.findIndex((s) => s.id === member.id || s.email.toLowerCase() === member.email.toLowerCase());
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...member, isActive: true };
+          return updated;
+        }
+        return [...prev, member];
+      });
+      setCurrentUser(member);
+      localStorage.setItem(STORAGE_KEY_AUTH, member.id);
+    },
+    []
+  );
+
   // Process QR / Barcode Scan
   // Mode can be 'entry' (default) or 'exit' (when someone leaves)
   const processScan = useCallback(
@@ -1985,6 +2043,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         register,
         logout,
         switchAccountFast,
+        loginAsStaffMember,
         processScan,
         markGuestLeft,
         manualCheckIn,

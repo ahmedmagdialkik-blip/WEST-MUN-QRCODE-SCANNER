@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { useVenue } from '../../context/VenueContext';
 import { StaffRole, ROLE_LABELS } from '../../types/venue';
 import {
-  Mail,
   User,
+  Lock,
   ArrowRight,
   Crown,
   KeyRound,
   X,
-  Shield,
-  CheckCircle2,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  XCircle,
 } from 'lucide-react';
 import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
+import { userAuthService } from '../../auth/userAuthService';
 
 interface AuthModalProps {
   onClose?: () => void;
@@ -21,10 +24,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const { authenticateByIdentifier, register, isAuthenticated, staffMembers, switchAccountFast } = useVenue();
 
   const [mode, setMode] = useState<'signin' | 'register' | 'switch'>('signin');
-  const [identifier, setIdentifier] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Registration state (Password-free)
+  // Registration state
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regRole, setRegRole] = useState<StaffRole>('security');
@@ -33,18 +38,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!identifier.trim()) {
-      setErrorMessage('Please enter your official delegate identifier or email.');
+    const cleanUsername = usernameInput.trim();
+    if (!cleanUsername) {
+      setErrorMessage('❌ Please enter your username.');
+      return;
+    }
+
+    if (!passwordInput) {
+      setErrorMessage('❌ Please enter your password.');
       return;
     }
 
     playClickSound();
-    const result = authenticateByIdentifier(identifier.trim());
+    const result = userAuthService.authenticate(cleanUsername, passwordInput);
     if (!result.success) {
       playWarningBuzzer();
-      setErrorMessage(result.error || 'Authentication rejected. Check your credential identifier.');
+      setErrorMessage(result.error);
     } else {
       playSuccessChime();
+      // Match or switch to authenticated staff
+      const foundStaff = staffMembers.find((s) => s.id === result.user.id || s.email.toLowerCase() === result.user.email.toLowerCase());
+      if (foundStaff) {
+        switchAccountFast(foundStaff.id);
+      }
       if (onClose) onClose();
     }
   };
@@ -125,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             className="text-[10px] uppercase tracking-[0.24em] text-[#B08D57] mt-0.5 font-serif"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Diplomatic Credential Verification
+            Diplomatic Admittance & Authentication
           </p>
         </div>
 
@@ -187,26 +203,59 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Mode 1: Sign In by Credential Identifier (Password-Free) */}
+        {/* Mode 1: Sign In by Username & Password */}
         {mode === 'signin' && (
           <form onSubmit={handleSignIn} className="space-y-3.5" autoComplete="off">
             <div>
               <label className="block text-xs font-serif text-[#B08D57] mb-1">
-                Official Identifier or Delegate Email
+                Username
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
                 <input
                   type="text"
                   required
-                  placeholder="e.g. AhmedMagdi or delegate email"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  value={usernameInput}
+                  onChange={(e) => {
+                    setUsernameInput(e.target.value);
+                    setErrorMessage(null);
+                  }}
                   autoComplete="off"
                   autoCorrect="off"
-                  spellCheck="false"
-                  className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] placeholder-neutral-500 focus:outline-none font-serif"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-3 py-2 text-xs text-[#F5F2EA] focus:outline-none font-serif"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-serif text-[#B08D57] mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className="w-full bg-[#100d0b] border border-[#B08D57]/40 focus:border-[#B08D57] rounded-xs pl-9 pr-9 py-2 text-xs text-[#F5F2EA] focus:outline-none font-serif"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-[#E5C578] transition cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
               </div>
             </div>
 
@@ -215,7 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               className="w-full py-2.5 px-4 rounded-xs bg-[#6E4E2E] hover:bg-[#B08D57] text-[#F5F2EA] font-serif text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-95"
             >
               <KeyRound className="w-3.5 h-3.5 text-[#B08D57]" />
-              <span>Authenticate Session</span>
+              <span>Sign In</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>

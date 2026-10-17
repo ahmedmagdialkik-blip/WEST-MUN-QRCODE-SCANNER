@@ -1,10 +1,15 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, ArrowRight, Shield, Calendar, Music } from 'lucide-react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Executive Welcome Screen (Silent, Animated Text Only)
+ * Strictly displays animated text with no audio or voice synthesis.
+ */
+
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, ShieldCheck, Calendar, Crown, Sparkles } from 'lucide-react';
 import officialLogoImage from '../../assets/images/west_mun_logo_official.jpg';
 import { StaffMember, ROLE_LABELS } from '../../types/venue';
-import { getTimeOfDayGreeting, isVoiceMuted, setVoiceMuted } from '../../utils/speech';
-import { playMozartWelcomeMusic } from '../../utils/mozartMusic';
-import { playClickSound } from '../../utils/audio';
 
 interface VoiceWelcomeScreenProps {
   user: StaffMember;
@@ -15,15 +20,12 @@ export const VoiceWelcomeScreen: React.FC<VoiceWelcomeScreenProps> = ({
   user,
   onComplete,
 }) => {
-  const [muted, setMuted] = useState<boolean>(isVoiceMuted);
-  const [isExiting, setIsExiting] = useState<boolean>(false);
+  const [stage, setStage] = useState<number>(0);
+  const [isExiting, setIsExiting] = useState(false);
 
-  const musicControlRef = useRef<{ fadeOut: (dur?: number) => void; stop: () => void } | null>(null);
-  const hasFinishedRef = useRef<boolean>(false);
-
-  // Dynamic time-based greeting calculation (never hardcoded)
-  const displayName = user?.name?.trim() || 'Delegate';
-  const { salutation } = getTimeOfDayGreeting(displayName);
+  const displayName = user?.name?.trim() || 'Ahmed Magdi';
+  const roleMeta = ROLE_LABELS[user.role];
+  const roleDisplayTitle = user.customTitle || roleMeta?.title || 'Executive Delegate';
 
   // Format today's date in formal diplomatic style
   const formattedDate = new Date().toLocaleDateString('en-US', {
@@ -33,230 +35,194 @@ export const VoiceWelcomeScreen: React.FC<VoiceWelcomeScreenProps> = ({
     year: 'numeric',
   });
 
-  // Role metadata
-  const roleMeta = ROLE_LABELS[user.role];
-  const roleDisplayTitle = user.customTitle || roleMeta?.title || 'Diplomatic Delegate';
+  // Time-based salutation
+  const currentHour = new Date().getHours();
+  let salutation = 'Good morning';
+  if (currentHour >= 12 && currentHour < 17) {
+    salutation = 'Good afternoon';
+  } else if (currentHour >= 17 || currentHour < 4) {
+    salutation = 'Good evening';
+  }
 
-  const handleFinish = useCallback(() => {
-    if (hasFinishedRef.current) return;
-    hasFinishedRef.current = true;
-
-    // Fade music smoothly
-    if (musicControlRef.current) {
-      musicControlRef.current.fadeOut(500);
-    }
-
-    setIsExiting(true);
-    setTimeout(() => {
-      if (musicControlRef.current) {
-        musicControlRef.current.stop();
-      }
-      onComplete();
-    }, 450); // smooth fade-out duration
-  }, [onComplete]);
-
-  // Start Mozart background music and schedule gentle completion
+  // Orchestrate text reveals
   useEffect(() => {
-    let fadeTimer: NodeJS.Timeout | null = null;
-    let endTimer: NodeJS.Timeout | null = null;
-
-    // 1. Play Mozart classical chamber strings
-    if (!muted) {
-      try {
-        musicControlRef.current = playMozartWelcomeMusic(0.22);
-      } catch (err) {
-        console.warn('Could not start Mozart audio:', err);
-      }
-    }
-
-    // 2. Allow Mozart's iconic theme to play gracefully for ~4.6 seconds, then fade out
-    fadeTimer = setTimeout(() => {
-      if (musicControlRef.current) {
-        musicControlRef.current.fadeOut(1400);
-      }
-    }, 4600);
-
-    endTimer = setTimeout(() => {
-      handleFinish();
-    }, 6000);
+    const t1 = setTimeout(() => setStage(1), 200);  // Reveal seal & badge
+    const t2 = setTimeout(() => setStage(2), 700);  // Reveal "Welcome back, <name>"
+    const t3 = setTimeout(() => setStage(3), 1300); // Reveal diplomatic credentials
+    const t4 = setTimeout(() => setStage(4), 1900); // Reveal action button & auto-progress
+    const tAuto = setTimeout(() => {
+      handleProceed();
+    }, 4200); // Auto advance after text animation finishes
 
     return () => {
-      if (fadeTimer) clearTimeout(fadeTimer);
-      if (endTimer) clearTimeout(endTimer);
-      if (musicControlRef.current) musicControlRef.current.stop();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      clearTimeout(tAuto);
     };
-  }, [handleFinish, muted]);
+  }, []);
 
-  // Toggle Mute / Unmute
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    playClickSound();
-    const nextMuted = !muted;
-    setMuted(nextMuted);
-    setVoiceMuted(nextMuted);
-
-    if (nextMuted) {
-      if (musicControlRef.current) musicControlRef.current.stop();
-    } else {
-      try {
-        musicControlRef.current = playMozartWelcomeMusic(0.22);
-      } catch {
-        // ignore
-      }
-    }
+  const handleProceed = () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    setTimeout(() => {
+      onComplete();
+    }, 400);
   };
 
   return (
     <div
-      role="dialog"
-      aria-label="West MUN Mozart Welcome Screen"
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-[#070605] text-[#F5F2EA] px-4 select-none transition-all duration-500 ${
-        isExiting ? 'opacity-0 scale-[0.99] pointer-events-none' : 'opacity-100 scale-100'
+      className={`fixed inset-0 z-50 bg-[#0A0908] text-[#F5F2EA] flex flex-col justify-between items-center p-6 sm:p-10 select-none overflow-hidden transition-opacity duration-400 ${
+        isExiting ? 'opacity-0 scale-98' : 'opacity-100 scale-100'
       }`}
-      style={{
-        backgroundImage: `
-          radial-gradient(circle at 50% 30%, rgba(176, 141, 87, 0.12) 0%, transparent 65%),
-          radial-gradient(circle at 50% 85%, rgba(110, 78, 46, 0.08) 0%, transparent 70%)
-        `,
-      }}
     >
-      {/* Top Controls: Mozart Audio Mute & Skip */}
-      <div className="absolute top-6 left-0 right-0 max-w-4xl mx-auto px-6 flex items-center justify-between z-20">
-        <button
-          type="button"
-          onClick={toggleMute}
-          aria-label={muted ? 'Unmute Mozart music' : 'Mute Mozart music'}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xs border border-[#B08D57]/30 bg-[#120f0d]/80 text-[#B08D57] hover:text-[#F5F2EA] hover:border-[#B08D57]/60 transition-colors text-xs font-serif cursor-pointer shadow-sm"
-          style={{ fontFamily: "'Cinzel', serif" }}
-        >
-          {muted ? (
-            <>
-              <VolumeX className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase tracking-wider">Music Muted</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-3.5 h-3.5 animate-pulse text-[#E5C578]" />
-              <span className="text-[10px] uppercase tracking-wider">Mozart Music On</span>
-            </>
-          )}
-        </button>
+      {/* Background ambient gold aura */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 50% 35%, rgba(176, 141, 87, 0.16) 0%, transparent 65%),
+            radial-gradient(circle at 15% 75%, rgba(110, 78, 46, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 85% 75%, rgba(110, 78, 46, 0.08) 0%, transparent 50%)
+          `,
+        }}
+      />
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            playClickSound();
-            handleFinish();
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xs border border-[#B08D57]/30 bg-[#120f0d]/80 text-[#B08D57] hover:text-[#F5F2EA] hover:border-[#B08D57]/60 transition-colors text-xs font-serif cursor-pointer shadow-sm"
-          style={{ fontFamily: "'Cinzel', serif" }}
-        >
-          <span className="text-[10px] uppercase tracking-wider">Skip</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
-      </div>
-
-      {/* Main Diplomatic Welcome Medallion & Greeting Card */}
-      <div className="relative w-full max-w-lg mx-auto flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-700">
-        {/* Subtle decorative engraved crown header */}
-        <div className="flex items-center justify-center gap-3 mb-5">
-          <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-[#B08D57]/60" />
+      {/* Top Diplomatic Header Bar */}
+      <header className="relative z-10 w-full max-w-2xl flex items-center justify-between border-b border-[#B08D57]/20 pb-3">
+        <div className="flex items-center gap-2.5">
+          <Crown className="w-4 h-4 text-[#B08D57]" />
           <span
-            className="text-[11px] uppercase tracking-[0.3em] text-[#B08D57] font-serif"
+            className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E5C578] font-serif"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            West MUN • Protocol
+            Western Model United Nations
           </span>
-          <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-[#B08D57]/60" />
         </div>
+        <div className="flex items-center gap-1.5 text-[10px] uppercase font-mono tracking-wider text-[#B08D57]/80">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Clearance Level 1</span>
+        </div>
+      </header>
 
-        {/* Official West MUN Seal Medallion */}
-        <div className="relative flex items-center justify-center mb-6">
-          {/* Outer Antique Gold Ring with Warm Ambient Glow */}
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full p-[2px] bg-gradient-to-b from-[#E5C578] via-[#B08D57] to-[#6E4E2E] shadow-[0_0_40px_rgba(176,141,87,0.3)] relative">
-            {/* Inner Dark Rim Framing Official Seal */}
-            <div className="w-full h-full rounded-full bg-[#120f0d] p-1.5 flex items-center justify-center overflow-hidden border border-[#B08D57]/40">
-              <img
-                src={officialLogoImage}
-                alt="West MUN Official Emblem"
-                className="w-full h-full rounded-full object-cover filter contrast-110 brightness-100"
-              />
+      {/* Center Animated Text Reveal */}
+      <main className="relative z-10 w-full max-w-xl flex flex-col items-center text-center my-auto">
+        {/* Stage 1: Official Seal */}
+        <div
+          className={`transition-all duration-700 transform mb-6 ${
+            stage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <div className="relative inline-flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-b from-[#E5C578] via-[#B08D57] to-[#6E4E2E] shadow-[0_0_40px_rgba(176,141,87,0.3)]">
+              <div className="w-full h-full rounded-full bg-[#120F0D] p-1.5 flex items-center justify-center overflow-hidden border border-[#B08D57]/40">
+                <img
+                  src={officialLogoImage}
+                  alt="West MUN Seal"
+                  className="w-full h-full rounded-full object-cover filter contrast-110"
+                />
+              </div>
             </div>
-
-            {/* Subtle Mozart music pulse ring */}
-            {!muted && (
-              <span className="absolute -inset-1.5 rounded-full border border-[#D4AF37]/30 animate-pulse pointer-events-none" />
-            )}
+            <div className="absolute -bottom-2 px-3 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-[9px] uppercase font-mono tracking-wider flex items-center gap-1 shadow-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Identity Verified</span>
+            </div>
           </div>
         </div>
 
-        {/* Mozart Classical Music Live Indicator */}
-        <div className="h-5 flex items-center justify-center gap-2 mb-3">
-          {!muted ? (
-            <div className="flex items-center gap-2 text-[#E5C578] px-3 py-0.5 rounded-full bg-[#16120E] border border-[#B08D57]/30">
-              <div className="flex items-center gap-1">
-                <span className="w-1 h-2 bg-[#D4AF37] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1 h-3.5 bg-[#E5C578] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1 h-2.5 bg-[#B08D57] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        {/* Stage 2: Main Animated Greeting */}
+        <div
+          className={`transition-all duration-700 transform ${
+            stage >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+          }`}
+        >
+          <p
+            className="text-xs uppercase tracking-[0.3em] text-[#B08D57] font-serif mb-2"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            {salutation} • Executive Access
+          </p>
+          <h1
+            className="text-2xl sm:text-4xl font-bold uppercase tracking-[0.16em] text-[#F5F2EA] mb-3 leading-tight font-serif"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            Welcome back,
+            <br />
+            <span className="bg-gradient-to-r from-[#F5E6BE] via-[#E5C578] to-[#B08D57] bg-clip-text text-transparent">
+              {displayName}
+            </span>
+          </h1>
+        </div>
+
+        {/* Stage 3: Credentials Badge Card */}
+        <div
+          className={`transition-all duration-700 transform w-full max-w-md ${
+            stage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+          }`}
+        >
+          <div className="p-4 rounded-xs bg-[#14110F]/90 border border-[#B08D57]/40 shadow-xl backdrop-blur-sm mb-6">
+            <div className="grid grid-cols-2 gap-3 text-left">
+              <div className="border-r border-[#B08D57]/20 pr-3">
+                <span className="text-[9px] uppercase tracking-wider text-[#B08D57] block font-serif">
+                  Diplomatic Title
+                </span>
+                <span className="text-xs font-bold text-[#F5F2EA] font-serif truncate block">
+                  {roleDisplayTitle}
+                </span>
               </div>
-              <Music className="w-3 h-3 text-[#E5C578]" />
-              <span
-                className="text-[10px] uppercase tracking-wider text-[#B08D57] font-serif"
-                style={{ fontFamily: "'Cinzel', serif" }}
-              >
-                Mozart • Eine kleine Nachtmusik
+              <div className="pl-1">
+                <span className="text-[9px] uppercase tracking-wider text-[#B08D57] block font-serif">
+                  Assigned Gate
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#E5C578] block">
+                  {user.assignedGate || 'Executive Chamber A'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-2.5 border-t border-[#B08D57]/20 flex items-center justify-between text-[10px] text-[#A89F91] font-serif">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 text-[#B08D57]" />
+                <span>{formattedDate}</span>
+              </span>
+              <span className="font-mono text-[#B08D57]">
+                {user.ticketId || 'MUN-EXEC-01'}
               </span>
             </div>
-          ) : (
-            <span
-              className="text-[10px] uppercase tracking-[0.22em] text-[#B08D57]/80 font-serif"
-              style={{ fontFamily: "'Cinzel', serif" }}
-            >
-              Diplomatic Session Authenticated
-            </span>
-          )}
-        </div>
-
-        {/* Salutation & Dynamic Greeting Text */}
-        <h1
-          className="text-2xl sm:text-3xl font-bold tracking-[0.06em] text-[#F5F2EA] mb-2 leading-tight"
-          style={{ fontFamily: "'Cinzel', serif" }}
-        >
-          {salutation}
-        </h1>
-
-        {/* Subtitle Message */}
-        <p
-          className="text-base sm:text-lg text-[#CFC7B4] font-serif italic max-w-md mx-auto mb-4 leading-relaxed"
-          style={{ fontFamily: "'Cormorant Garamond', serif" }}
-        >
-          &ldquo;Welcome back to the West MUN Executive Portal.&rdquo;
-        </p>
-
-        {/* Diplomatic Role Badge & Today's Date */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-[#B08D57]">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xs bg-[#1A1512] border border-[#B08D57]/30">
-            <Shield className="w-3.5 h-3.5 text-[#B08D57] shrink-0" />
-            <span
-              className="font-serif uppercase tracking-wider text-[11px] text-[#F5F2EA]"
-              style={{ fontFamily: "'Cinzel', serif" }}
-            >
-              {roleDisplayTitle}
-            </span>
-          </div>
-
-          <div className="inline-flex items-center gap-1.5 text-neutral-400 font-serif text-[12px]">
-            <Calendar className="w-3 h-3 text-[#B08D57]" />
-            <span>{formattedDate}</span>
           </div>
         </div>
 
-        {/* Bottom Antique Gold Atmospheric Shimmer Line */}
-        <div className="w-48 h-[1px] bg-neutral-800 mt-8 relative overflow-hidden rounded-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#E5C578] to-transparent animate-pulse" />
+        {/* Stage 4: Enter Console Action */}
+        <div
+          className={`transition-all duration-700 transform ${
+            stage >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <button
+            onClick={handleProceed}
+            className="px-6 py-2.5 rounded-xs bg-gradient-to-r from-[#8C673B] via-[#B08D57] to-[#8C673B] hover:from-[#A67C48] hover:via-[#C5A059] hover:to-[#A67C48] text-[#0A0908] font-bold text-xs uppercase tracking-[0.22em] transition-all cursor-pointer shadow-lg flex items-center gap-2.5 font-serif border border-[#E5C578]/60 hover:scale-102"
+            style={{ fontFamily: "'Cinzel', serif" }}
+          >
+            <span>Proceed to Console</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
-      </div>
+      </main>
+
+      {/* Diplomatic Developer Footer */}
+      <footer className="relative z-10 w-full text-center pt-3 border-t border-[#B08D57]/15">
+        <span
+          className="text-[10px] uppercase tracking-[0.25em] font-serif"
+          style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            color: '#B08D57',
+            opacity: 0.6,
+          }}
+        >
+          Western Model United Nations • Developed by Ahmed Magdi
+        </span>
+      </footer>
     </div>
   );
 };

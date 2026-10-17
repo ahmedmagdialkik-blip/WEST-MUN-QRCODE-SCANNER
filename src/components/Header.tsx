@@ -25,14 +25,12 @@ interface HeaderProps {
   onOpenTestBadges: () => void;
   onOpenAuth: () => void;
   onReplayIntro?: () => void;
-  onOpenFaceId?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenTestBadges,
   onOpenAuth,
   onReplayIntro,
-  onOpenFaceId,
 }) => {
   const {
     currentUser,
@@ -188,18 +186,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Sound Toggle */}
-            <button
-              onClick={toggleSound}
-              className={`p-2 rounded-none border transition cursor-pointer ${
-                settings.soundEnabled
-                  ? 'bg-[#181310] border-[#B08D57]/40 text-[#B08D57] hover:text-[#F5F2EA]'
-                  : 'bg-red-950/40 border-red-500/40 text-red-400'
-              }`}
-              title={settings.soundEnabled ? 'Mute Audio' : 'Unmute Audio'}
-            >
-              {settings.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            </button>
 
             {/* User Profile Dropdown Button */}
             {currentUser ? (
@@ -404,20 +390,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <Shield className="w-3.5 h-3.5 text-[#B08D57]" />
                   <span>Diplomatic Passes</span>
                 </button>
-
-                {onOpenFaceId && (
-                  <button
-                    onClick={() => {
-                      playClickSound();
-                      setMobileMenuOpen(false);
-                      onOpenFaceId();
-                    }}
-                    className="w-full py-2 px-3 rounded-none bg-[#1a1410] border border-[#B08D57]/30 text-amber-200 text-xs font-serif tracking-wider flex items-center gap-2.5 transition"
-                  >
-                    <ScanFace className="w-3.5 h-3.5 text-[#B08D57]" />
-                    <span>Face ID Biometric Scan</span>
-                  </button>
-                )}
 
                 {onReplayIntro && (
                   <button
