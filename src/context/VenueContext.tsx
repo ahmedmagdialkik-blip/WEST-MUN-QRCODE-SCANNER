@@ -60,11 +60,11 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'west_mun_guests_v12_32unique';
-const STORAGE_KEY_STAFF = 'west_mun_staff_v12_32unique';
-const STORAGE_KEY_SETTINGS = 'west_mun_settings_v12_32unique';
-const STORAGE_KEY_LOGS = 'west_mun_logs_v12_32unique';
-const STORAGE_KEY_AUTH = 'west_mun_auth_v12_32unique';
+const STORAGE_KEY_GUESTS = 'west_mun_guests_v13_all_security';
+const STORAGE_KEY_STAFF = 'west_mun_staff_v13_all_security';
+const STORAGE_KEY_SETTINGS = 'west_mun_settings_v13_all_security';
+const STORAGE_KEY_LOGS = 'west_mun_logs_v13_all_security';
+const STORAGE_KEY_AUTH = 'west_mun_auth_v13_all_security';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -158,6 +158,60 @@ const INITIAL_STAFF: StaffMember[] = [
     isActive: true,
     lastActiveTime: new Date().toISOString(),
   },
+  {
+    id: 'staff-sec-yusef',
+    name: 'Yusef Saad',
+    email: 'yusef.saad@westmun.org',
+    customTitle: 'Head of Male Security',
+    password: '5714',
+    role: 'security',
+    accessKey: '5714',
+    assignedGate: 'Access Control',
+    ticketId: 'MUN-SEC-01',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-sec-najla',
+    name: 'Najla Rami',
+    email: 'najla.rami@westmun.org',
+    customTitle: 'Head of Female Security',
+    password: '6239',
+    role: 'security',
+    accessKey: '6239',
+    assignedGate: 'Access Control',
+    ticketId: 'MUN-SEC-02',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-sec-bushra',
+    name: 'Bushra Ismail',
+    email: 'bushra.ismail@westmun.org',
+    customTitle: 'Co-Head of Security',
+    password: '7841',
+    role: 'security',
+    accessKey: '7841',
+    assignedGate: 'Access Control',
+    ticketId: 'MUN-SEC-03',
+    canScan: true,
+    canManualCheckIn: true,
+    canRevokeCheckIn: true,
+    canManageStaff: true,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
 
   // Executive Board & Leadership
   {
@@ -224,62 +278,6 @@ const INITIAL_STAFF: StaffMember[] = [
     accessKey: '4820',
     assignedGate: 'Executive Board',
     ticketId: 'MUN-EXEC-04',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-
-  // Secretariat (Sec)
-  {
-    id: 'staff-sec-yusef',
-    name: 'Yusef Saad',
-    email: 'yusef.saad@westmun.org',
-    customTitle: 'Head of Male Sec',
-    password: '5714',
-    role: 'secretary',
-    accessKey: '5714',
-    assignedGate: 'Secretariat Hub',
-    ticketId: 'MUN-SEC-01',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-sec-najla',
-    name: 'Najla Rami',
-    email: 'najla.rami@westmun.org',
-    customTitle: 'Head of Female Sec',
-    password: '6239',
-    role: 'secretary',
-    accessKey: '6239',
-    assignedGate: 'Secretariat Hub',
-    ticketId: 'MUN-SEC-02',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-sec-bushra',
-    name: 'Bushra Ismail',
-    email: 'bushra.ismail@westmun.org',
-    customTitle: 'Co-Head of Sec',
-    password: '7841',
-    role: 'secretary',
-    accessKey: '7841',
-    assignedGate: 'Secretariat Hub',
-    ticketId: 'MUN-SEC-03',
     canScan: false,
     canManualCheckIn: false,
     canRevokeCheckIn: false,
@@ -727,41 +725,6 @@ const INITIAL_GUESTS: Guest[] = [
     scanCount: 0,
   },
 
-  // Secretariat (Sec)
-  {
-    id: 'g-sec-yusef',
-    name: 'Yusef Saad',
-    ticketId: 'MUN-SEC-01',
-    category: 'Staff',
-    role: 'Head of Male Sec',
-    tableOrSeat: 'Secretariat',
-    notes: 'Secretariat (Sec) Department',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
-    id: 'g-sec-najla',
-    name: 'Najla Rami',
-    ticketId: 'MUN-SEC-02',
-    category: 'Staff',
-    role: 'Head of Female Sec',
-    tableOrSeat: 'Secretariat',
-    notes: 'Secretariat (Sec) Department',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
-    id: 'g-sec-bushra',
-    name: 'Bushra Ismail',
-    ticketId: 'MUN-SEC-03',
-    category: 'Staff',
-    role: 'Co-Head of Sec',
-    tableOrSeat: 'Secretariat',
-    notes: 'Secretariat (Sec) Department',
-    status: 'Pending',
-    scanCount: 0,
-  },
-
   // Marketing
   {
     id: 'g-mkt-naya',
@@ -947,6 +910,39 @@ const INITIAL_GUESTS: Guest[] = [
     status: 'Pending',
     scanCount: 0,
   },
+  {
+    id: 'g-sec-yusef',
+    name: 'Yusef Saad',
+    ticketId: 'MUN-SEC-01',
+    category: 'Staff',
+    role: 'Head of Male Security',
+    tableOrSeat: 'Access Control Gate',
+    notes: 'Security Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-sec-najla',
+    name: 'Najla Rami',
+    ticketId: 'MUN-SEC-02',
+    category: 'Staff',
+    role: 'Head of Female Security',
+    tableOrSeat: 'Access Control Gate',
+    notes: 'Security Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-sec-bushra',
+    name: 'Bushra Ismail',
+    ticketId: 'MUN-SEC-03',
+    category: 'Staff',
+    role: 'Co-Head of Security',
+    tableOrSeat: 'Access Control Gate',
+    notes: 'Security Department • Authorized Scanner',
+    status: 'Pending',
+    scanCount: 0,
+  },
 
   // Volunteers (Vols)
   {
@@ -1068,7 +1064,25 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: StaffMember[] = JSON.parse(saved);
+        return parsed.map((s) => {
+          if ((s.role as string) === 'secretary') {
+            return {
+              ...s,
+              role: 'security' as StaffRole,
+              canScan: true,
+              canManualCheckIn: true,
+              canRevokeCheckIn: true,
+              canManageStaff: true,
+              canExportData: true,
+              assignedGate: s.assignedGate === 'Secretariat Hub' ? 'Access Control' : s.assignedGate,
+              customTitle: s.customTitle ? s.customTitle.replace(/Sec\b|Secretariat/g, 'Security') : 'Security Officer',
+            };
+          }
+          return s;
+        });
+      }
     } catch (e) {
       console.error(e);
     }
@@ -1083,7 +1097,19 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const savedAuthId = localStorage.getItem(STORAGE_KEY_AUTH);
       if (savedAuthId) {
         const found = staffMembers.find((s) => s.id === savedAuthId);
-        if (found) return found;
+        if (found) {
+          if ((found.role as string) === 'secretary') {
+            return {
+              ...found,
+              role: 'security' as StaffRole,
+              canScan: true,
+              canManualCheckIn: true,
+              canRevokeCheckIn: true,
+              canManageStaff: true,
+            };
+          }
+          return found;
+        }
       }
     } catch (e) {
       console.error(e);

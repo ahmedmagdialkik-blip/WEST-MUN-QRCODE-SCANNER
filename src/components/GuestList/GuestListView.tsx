@@ -44,9 +44,9 @@ export const GuestListView: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isSecretaryOrAdmin =
+  const isSecurityOrAdmin =
     currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'secretary' ||
+    currentUser?.role === 'security' ||
     currentUser?.role === 'it' ||
     currentUser?.role === 'pr';
 
@@ -143,7 +143,7 @@ export const GuestListView: React.FC = () => {
 
         {/* Action Toolbar */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {isSecretaryOrAdmin && (
+          {isSecurityOrAdmin && (
             <button
               onClick={() => {
                 playClickSound();
@@ -157,7 +157,7 @@ export const GuestListView: React.FC = () => {
             </button>
           )}
 
-          {isSecretaryOrAdmin && (
+          {isSecurityOrAdmin && (
             <>
               <label className="px-2.5 py-1.5 bg-[#181310] hover:bg-[#251e19] text-[#B08D57] hover:text-[#F5F2EA] text-xs font-serif tracking-wider flex items-center gap-1.5 transition cursor-pointer border border-[#B08D57]/40">
                 <Upload className="w-3.5 h-3.5 text-[#B08D57]" />

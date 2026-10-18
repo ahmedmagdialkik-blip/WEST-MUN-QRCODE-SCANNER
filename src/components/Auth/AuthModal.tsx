@@ -85,8 +85,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       canScan,
       canManualCheckIn: canScan,
       canRevokeCheckIn: canScan,
-      canManageStaff: ['super_admin', 'hr', 'it'].includes(regRole),
-      canExportData: ['super_admin', 'marketing', 'secretary', 'it', 'pr'].includes(regRole),
+      canManageStaff: ['super_admin', 'hr', 'it', 'security'].includes(regRole),
+      canExportData: ['super_admin', 'marketing', 'security', 'it', 'pr'].includes(regRole),
       isActive: true,
       lastActiveTime: new Date().toISOString(),
     });
@@ -345,7 +345,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 </optgroup>
                 <optgroup label="Staff Pass Holders (Personal QR Pass Only)">
                   <option value="executive">Executive Board & Leadership (Executive Pass)</option>
-                  <option value="secretary">Secretariat (Secretariat Pass)</option>
                   <option value="marketing">Marketing (Marketing Pass)</option>
                   <option value="designers">Design (Design Team Pass)</option>
                   <option value="media_and_press">Media & Press (Press Pass)</option>

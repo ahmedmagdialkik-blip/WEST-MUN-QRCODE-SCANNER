@@ -341,7 +341,6 @@ export const TeamManagementView: React.FC = () => {
             'security',
             'super_admin',
             'executive',
-            'secretary',
             'marketing',
             'designers',
             'media_and_press',
@@ -760,7 +759,6 @@ export const TeamManagementView: React.FC = () => {
                   <option value="marketing">Marketing (Pass Holder)</option>
                   <option value="designers">Design (Pass Holder)</option>
                   <option value="media_and_press">Media & Press (Pass Holder)</option>
-                  <option value="secretary">Secretariat (Pass Holder)</option>
                   <option value="executive">Executive Board (Pass Holder)</option>
                   <option value="logistics">Logistics (Pass Holder)</option>
                   <option value="pr">Public Relations (Pass Holder)</option>
