@@ -16,151 +16,121 @@ import { TestTicketBadges } from './components/Scanner/TestTicketBadges';
 import { ScanFeedbackOverlay } from './components/Scanner/ScanFeedbackOverlay';
 import { AuthModal } from './components/Auth/AuthModal';
 import { LuxuryIntro } from './components/Intro/LuxuryIntro';
-import { VoiceWelcomeScreen } from './components/Welcome/VoiceWelcomeScreen';
-import { ExecutivePortalLogin } from './components/auth/ExecutivePortalLogin';
-import { EnrolledUser } from './auth/types';
-import { isScannerOrAdminRole, StaffMember, ROLE_LABELS } from './types/venue';
+import { ExecutiveLoginPage } from './components/Auth/ExecutiveLoginPage';
+import { WelcomeGreetingOverlay } from './components/Auth/WelcomeGreetingOverlay';
+import { DanaFreshmanEasterEgg } from './components/EasterEgg/DanaFreshmanEasterEgg';
+import { isDanaAlnajar } from './utils/easterEggAuth';
+import { isScannerOrAdminRole, ROLE_LABELS, StaffMember } from './types/venue';
 
-type AppFlowStage = 'login' | 'welcome' | 'intro' | 'homepage';
+type AppFlowStage = 'intro' | 'login' | 'dana_easter_egg' | 'welcome' | 'homepage';
 
 function MainVenueContent() {
   const {
     activeTab,
     isAuthenticated,
     currentUser,
-    switchAccountFast,
-    loginAsStaffMember,
     lastScanResult,
     clearLastScanResult,
-    staffMembers,
   } = useVenue();
 
-  const [isFreshLogin, setIsFreshLogin] = useState<boolean>(false);
-
-  // Flow Stages: login -> welcome -> intro -> homepage
-  const [flowStage, setFlowStage] = useState<AppFlowStage>(() => {
-    try {
-      const isSaved = localStorage.getItem('west_mun_auth_session') === 'authenticated';
-      const savedAuthId = localStorage.getItem('west_mun_auth_v10_mozart');
-      if (isSaved && savedAuthId) {
-        return 'welcome';
-      }
-    } catch {
-      // ignore
-    }
-    return 'login';
-  });
+  // Website Flow:
+  // 1. The West MUN intro animation is the 1st thing that pops up on the website!
+  // 2. After intro completes, if already authenticated, show Welcome/Homepage; otherwise show Login Page.
+  // 3. User can replay intro at any time from the Header.
+  const [flowStage, setFlowStage] = useState<AppFlowStage>('intro');
 
   const [isTestBadgesOpen, setIsTestBadgesOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Reset to login if user logs out
+  // Sync state if user logs out
   useEffect(() => {
-    if (!isAuthenticated && (flowStage === 'homepage' || flowStage === 'welcome')) {
+    if (!isAuthenticated && (flowStage === 'homepage' || flowStage === 'welcome' || flowStage === 'dana_easter_egg')) {
       try {
         localStorage.removeItem('west_mun_auth_session');
       } catch {
         // ignore
       }
       setFlowStage('login');
-      setIsFreshLogin(false);
     }
   }, [isAuthenticated, flowStage]);
 
-  // Handle successful multi-user authentication (QR Code, Email, or Face ID)
-  const handleAuthenticationSuccess = (user: EnrolledUser) => {
+  // Handle successful login from ExecutiveLoginPage
+  const handleAuthenticationSuccess = (user?: StaffMember) => {
     try {
       localStorage.setItem('west_mun_auth_session', 'authenticated');
     } catch {
       // ignore
     }
 
-    const cleanEmail = (user.email || '').toLowerCase().trim();
-    const cleanName = (user.fullName || '').toLowerCase().trim();
-
-    // Dynamically match specific user profile
-    const foundStaff = staffMembers.find((s) => {
-      return (
-        s.id === user.id ||
-        (cleanEmail && s.email.toLowerCase() === cleanEmail) ||
-        (cleanName && s.name.toLowerCase() === cleanName)
-      );
-    });
-
-    if (foundStaff) {
-      loginAsStaffMember(foundStaff);
+    const activeUser = user || currentUser;
+    if (activeUser && isDanaAlnajar(activeUser.name)) {
+      // Pause normal transition and trigger Dana Alnajar freshman easter egg
+      setFlowStage('dana_easter_egg');
     } else {
-      // Create session for authenticated user
-      const canScan = isScannerOrAdminRole(user.role);
-      const newStaff: StaffMember = {
-        id: user.id,
-        name: user.fullName,
-        email: user.email,
-        role: user.role || 'executive',
-        customTitle: user.role ? ROLE_LABELS[user.role]?.title : 'Diplomatic Delegate',
-        assignedGate: 'MUN Venue',
-        ticketId: user.ticketId || `MUN-${(user.role || 'EXEC').substring(0, 3).toUpperCase()}-01`,
-        accessKey: '1000',
-        canScan,
-        canManualCheckIn: canScan,
-        canRevokeCheckIn: canScan,
-        canManageStaff: canScan,
-        canExportData: true,
-        isActive: true,
-        lastActiveTime: new Date().toISOString(),
-      };
-      loginAsStaffMember(newStaff);
+      // Standard flow for every other user
+      setFlowStage('welcome');
     }
-
-    setIsFreshLogin(true);
-    // Sequence: Authenticate -> Personalized Welcome Screen -> Intro -> Homepage
-    setFlowStage('welcome');
   };
 
-  // 1. Stage: Executive Portal Authentication Screen (Default Email, Face ID on demand, QR Code)
-  if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'welcome' && flowStage !== 'intro')) {
-    return <ExecutivePortalLogin onAuthenticated={handleAuthenticationSuccess} />;
-  }
-
-  // 2. Stage: Executive Welcome Screen (Silent, animated text only)
-  if (flowStage === 'welcome') {
-    if (!currentUser) {
-      return <ExecutivePortalLogin onAuthenticated={handleAuthenticationSuccess} />;
-    }
-
+  // 1. Stage: West MUN Intro Animation (FIRST screen that pops up on website)
+  if (flowStage === 'intro') {
     return (
-      <VoiceWelcomeScreen
-        user={currentUser}
+      <LuxuryIntro
         onComplete={() => {
-          if (isFreshLogin) {
-            // Fresh login: proceed to Intro Animation (2–3s)
-            setFlowStage('intro');
+          if (isAuthenticated && currentUser) {
+            setFlowStage('welcome');
           } else {
-            // Already logged in: proceed directly to Homepage
-            setFlowStage('homepage');
+            setFlowStage('login');
           }
         }}
       />
     );
   }
 
-  // 3. Stage: Luxury Intro Animation (with clear "Developed by Ahmed Magdi" signature)
-  if (flowStage === 'intro') {
+  // 2. Stage: Executive Multi-User Login Page
+  if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'welcome' && flowStage !== 'dana_easter_egg')) {
+    return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
+  }
+
+  // Special Hidden Easter Egg: Dana Alnajar Freshman Welcome
+  if (flowStage === 'dana_easter_egg') {
     return (
-      <LuxuryIntro
+      <DanaFreshmanEasterEgg
         onComplete={() => {
-          setIsFreshLogin(false);
           setFlowStage('homepage');
         }}
       />
     );
   }
 
-  // 4. Stage: Homepage (Executive Portal) - Only reached after authentication & welcome!
+  // 3. Stage: Natural Voice Welcome Greeting Overlay
+  if (flowStage === 'welcome') {
+    return (
+      <WelcomeGreetingOverlay
+        displayName={currentUser?.name || 'Diplomatic Delegate'}
+        userRole={currentUser ? ROLE_LABELS[currentUser.role]?.title : undefined}
+        onComplete={() => {
+          setFlowStage('homepage');
+        }}
+      />
+    );
+  }
+
+  // 4. Stage: Homepage (Executive Portal)
   const isAuthorizedScanner = currentUser ? isScannerOrAdminRole(currentUser.role) : false;
 
   return (
-    <div className="min-h-screen bg-[#0A0908] text-[#F5F2EA] flex flex-col font-sans selection:bg-[#B08D57]/30 selection:text-[#E5C578] animate-in fade-in duration-500 overflow-x-hidden">
+    <div
+      className="min-h-screen text-[#F7F2EA] flex flex-col font-sans selection:bg-[#c99b58]/30 selection:text-[#e5c578] animate-in fade-in duration-500 overflow-x-hidden"
+      style={{
+        backgroundColor: '#120b07',
+        backgroundImage: `
+          radial-gradient(circle at 50% 0%, rgba(61, 40, 28, 0.45) 0%, transparent 60%),
+          radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+          linear-gradient(to bottom, #170f0a 0%, #0e0805 100%)
+        `,
+      }}
+    >
       {/* Handcrafted Diplomatic Header */}
       <Header
         onOpenTestBadges={() => setIsTestBadgesOpen(true)}
@@ -184,24 +154,24 @@ function MainVenueContent() {
         )}
       </main>
 
-      {/* Developer Signature Footer */}
+      {/* Developer Signature Footer - subtle artist signature (~18% opacity, antique gold) */}
       <footer className="w-full py-4 text-center z-10 select-none pb-24">
         <span
           className="text-[9px] sm:text-[10px] uppercase tracking-[0.28em] italic select-none"
           style={{
             fontFamily: "'Cormorant Garamond', Georgia, serif",
             color: '#B08D57',
-            opacity: 0.22,
+            opacity: 0.18,
           }}
         >
-          Western Model United Nations • Developed by Ahmed Magdi
+          Developed by Ahmed Magdi
         </span>
       </footer>
 
       {/* Bottom Sticky Navigation: Strictly restricted to Security and Admins */}
       {isAuthorizedScanner && <BottomNav />}
 
-      {/* Full-Screen Scan Result Feedback */}
+      {/* Full-Screen Scan Result Audio & Visual Feedback Overlay */}
       {lastScanResult && (
         <ScanFeedbackOverlay
           result={lastScanResult}

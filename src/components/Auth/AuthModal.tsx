@@ -12,6 +12,7 @@ import {
   EyeOff,
   AlertTriangle,
   XCircle,
+  Mail,
 } from 'lucide-react';
 import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
 import { userAuthService } from '../../auth/userAuthService';
@@ -21,7 +22,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
-  const { authenticateByIdentifier, register, isAuthenticated, staffMembers, switchAccountFast } = useVenue();
+  const { login, register, isAuthenticated, staffMembers, switchAccountFast } = useVenue();
 
   const [mode, setMode] = useState<'signin' | 'register' | 'switch'>('signin');
   const [usernameInput, setUsernameInput] = useState('');
@@ -40,27 +41,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
     const cleanUsername = usernameInput.trim();
     if (!cleanUsername) {
-      setErrorMessage('❌ Please enter your username.');
+      setErrorMessage('❌ Invalid username.');
       return;
     }
 
     if (!passwordInput) {
-      setErrorMessage('❌ Please enter your password.');
+      setErrorMessage('❌ Incorrect password.');
       return;
     }
 
     playClickSound();
-    const result = userAuthService.authenticate(cleanUsername, passwordInput);
-    if (!result.success) {
+    const result = login(cleanUsername, passwordInput);
+    if (!result.success || !result.user) {
       playWarningBuzzer();
-      setErrorMessage(result.error);
+      setErrorMessage(result.error || '❌ Invalid username.');
     } else {
       playSuccessChime();
-      // Match or switch to authenticated staff
-      const foundStaff = staffMembers.find((s) => s.id === result.user.id || s.email.toLowerCase() === result.user.email.toLowerCase());
-      if (foundStaff) {
-        switchAccountFast(foundStaff.id);
-      }
+      switchAccountFast(result.user.id);
       if (onClose) onClose();
     }
   };

@@ -110,10 +110,10 @@ export const BottomNav: React.FC = () => {
             )}
           </div>
           <span
-            className="text-[10px] mt-1 tracking-wider font-serif uppercase"
+            className="text-[10px] mt-1 tracking-wider font-serif uppercase font-semibold"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Chambers
+            Credentials
           </span>
         </button>
       </div>

@@ -149,12 +149,12 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => handleNavClick('team')}
                   className={`px-2.5 py-1 text-xs font-serif uppercase tracking-wider rounded-none transition border ${
                     activeTab === 'team'
-                      ? 'bg-[#221b16] text-[#B08D57] border-[#B08D57]/60'
+                      ? 'bg-[#221b16] text-[#c99b58] border-[#c99b58]/60 font-bold'
                       : 'text-neutral-400 hover:text-[#F5F2EA] border-transparent'
                   }`}
                   style={{ fontFamily: "'Cinzel', serif" }}
                 >
-                  Team
+                  Credentials & Team
                 </button>
               </nav>
             )}
@@ -360,12 +360,12 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleNavClick('team')}
                     className={`w-full py-2.5 px-3 flex items-center gap-3 text-xs font-serif tracking-wider uppercase transition border ${
                       activeTab === 'team'
-                        ? 'bg-[#251d18] text-[#B08D57] border-[#B08D57]/60'
-                        : 'bg-[#181310] text-neutral-300 border-transparent hover:border-[#B08D57]/30'
+                        ? 'bg-[#251d18] text-[#e5c578] border-[#c99b58]/60 font-bold'
+                        : 'bg-[#181310] text-neutral-300 border-transparent hover:border-[#a87944]/30'
                     }`}
                   >
-                    <ShieldAlert className="w-4 h-4 text-[#B08D57]" />
-                    <span>Security Team</span>
+                    <ShieldAlert className="w-4 h-4 text-[#c99b58]" />
+                    <span>Credentials & Team</span>
                   </button>
                 </div>
               )}

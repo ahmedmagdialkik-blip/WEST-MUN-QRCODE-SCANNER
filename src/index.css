@@ -6,10 +6,14 @@
     --font-display: 'Cinzel', 'Marcellus', serif;
     --font-decorative: 'IM Fell English', 'Cormorant Garamond', serif;
     --font-mono: 'JetBrains Mono', monospace;
-    --color-antique-gold: #B08D57;
-    --color-dark-bronze: #6E4E2E;
-    --color-charcoal: #171717;
-    --color-ivory: #F5F2EA;
+    --color-leather-dark: #120b07;
+    --color-leather-warm: #1b120c;
+    --color-leather-chocolate: #261710;
+    --color-bronze-gold: #c99b58;
+    --color-gold-burnished: #a87944;
+    --color-gold-bright: #e5c578;
+    --color-gold-radiant: #d4af37;
+    --color-ivory: #F7F2EA;
   }
 
   html, body {
@@ -20,16 +24,17 @@
   }
 
   body {
-    background-color: #0e0c0a;
-    color: #F5F2EA;
+    background-color: #120b07;
+    color: #F7F2EA;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     overscroll-behavior-y: none;
     background-image: 
-      radial-gradient(ellipse at 50% 0%, rgba(176, 141, 87, 0.08) 0%, transparent 60%),
-      radial-gradient(ellipse at 50% 100%, rgba(110, 78, 46, 0.06) 0%, transparent 70%);
+      radial-gradient(ellipse at 50% 0%, rgba(61, 40, 28, 0.45) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+      linear-gradient(to bottom, #170f0a 0%, #0e0805 100%);
   }
 
   h1, h2, h3, h4, .font-display {

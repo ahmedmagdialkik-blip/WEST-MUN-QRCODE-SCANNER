@@ -25,6 +25,8 @@ interface VenueContextType {
   setActiveTab: (tab: 'scanner' | 'dashboard' | 'guestlist' | 'team') => void;
   login: (identifier: string, pass?: string) => { success: boolean; user?: StaffMember; error?: string };
   authenticateByIdentifier: (identifier: string) => { success: boolean; error?: string; user?: StaffMember };
+  resetStaffPassword: (staffId: string, customPassword?: string) => { success: boolean; newPassword?: string; error?: string };
+  generateNewStaffPassword: (staffId: string) => { success: boolean; newPassword?: string; error?: string };
   register: (staffData: Omit<StaffMember, 'id'>) => { success: boolean; error?: string };
   logout: () => void;
   switchAccountFast: (staffId: string) => void;
@@ -58,11 +60,11 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'west_mun_guests_v10_mozart';
-const STORAGE_KEY_STAFF = 'west_mun_staff_v10_mozart';
-const STORAGE_KEY_SETTINGS = 'west_mun_settings_v10_mozart';
-const STORAGE_KEY_LOGS = 'west_mun_logs_v10_mozart';
-const STORAGE_KEY_AUTH = 'west_mun_auth_v10_mozart';
+const STORAGE_KEY_GUESTS = 'west_mun_guests_v12_32unique';
+const STORAGE_KEY_STAFF = 'west_mun_staff_v12_32unique';
+const STORAGE_KEY_SETTINGS = 'west_mun_settings_v12_32unique';
+const STORAGE_KEY_LOGS = 'west_mun_logs_v12_32unique';
+const STORAGE_KEY_AUTH = 'west_mun_auth_v12_32unique';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -81,29 +83,9 @@ const DEFAULT_SETTINGS: VenueSettings = {
 // Both IT and Security members have the ability to add members to their team.
 // All other roles (Design, Media, PR, HR, etc.) have their personal scannable QR Pass.
 const INITIAL_STAFF: StaffMember[] = [
-  // Executive Leadership (Sarah Johnson)
+  // IT Team (Admin of IT: Ahmed Magdi - Password MUST be 344)
   {
-    id: 'usr-sarah-johnson-uuid-8812',
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@westmun.org',
-    customTitle: 'Executive Board Vice President',
-    password: 'exec8812',
-    role: 'executive',
-    accessKey: '8812',
-    assignedGate: 'Executive Chamber',
-    ticketId: 'MUN-EXEC-08',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-
-  // IT Team (Admin of IT: Ahmed Magdi)
-  {
-    id: 'usr-ahmed-magdi-uuid-1049',
+    id: 'staff-it-ahmed',
     name: 'Ahmed Magdi',
     email: 'ahmed.magdi@westmun.org',
     customTitle: 'Admin of IT & Head of Systems',
@@ -123,32 +105,13 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-it-saleh',
     name: 'Saleh Samaha',
-    email: 'saleh.samaha@munvenue.org',
-    password: 'it6002',
+    email: 'saleh.samaha@westmun.org',
+    customTitle: 'Co-Head of IT',
+    password: '5821',
     role: 'it',
-    accessKey: '6002',
-    assignedGate: 'MUN Venue',
+    accessKey: '5821',
+    assignedGate: 'Security & Tech Hub',
     ticketId: 'MUN-IT-02',
-    canScan: true,
-    canManualCheckIn: true,
-    canRevokeCheckIn: true,
-    canManageStaff: true,
-    canExportData: true,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-
-  // Security Team (John Smith - Chief Security Officer)
-  {
-    id: 'usr-john-smith-uuid-3914',
-    name: 'John Smith',
-    email: 'john.smith@westmun.org',
-    customTitle: 'Chief Security Officer',
-    password: 'sec3914',
-    role: 'security',
-    accessKey: '3914',
-    assignedGate: 'Diplomatic Main Gate',
-    ticketId: 'MUN-SEC-01',
     canScan: true,
     canManualCheckIn: true,
     canRevokeCheckIn: true,
@@ -162,11 +125,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-sec-lead',
     name: 'Security Lead',
-    email: 'security.lead@munvenue.org',
-    password: 'sec7001',
+    email: 'security.lead@westmun.org',
+    customTitle: 'Head of Security',
+    password: '9046',
     role: 'security',
-    accessKey: '7001',
-    assignedGate: 'MUN Venue',
+    accessKey: '9046',
+    assignedGate: 'Main Entrance Gate',
     ticketId: 'MUN-SEC-LEAD-01',
     canScan: true,
     canManualCheckIn: true,
@@ -179,11 +143,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-sec-officer',
     name: 'Security Officer',
-    email: 'security.officer@munvenue.org',
-    password: 'sec7002',
+    email: 'security.officer@westmun.org',
+    customTitle: 'Security Officer',
+    password: '4279',
     role: 'security',
-    accessKey: '7002',
-    assignedGate: 'MUN Venue',
+    accessKey: '4279',
+    assignedGate: 'Access Control',
     ticketId: 'MUN-SEC-OFF-02',
     canScan: true,
     canManualCheckIn: true,
@@ -198,11 +163,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-rakan',
     name: 'Rakan Almerbed',
-    email: 'rakan.almerbed@munvenue.org',
-    password: 'sg1001',
+    email: 'rakan.almerbed@westmun.org',
+    customTitle: 'Secretary General',
+    password: '1042',
     role: 'super_admin',
-    accessKey: '1001',
-    assignedGate: 'MUN Venue',
+    accessKey: '1042',
+    assignedGate: 'Executive Board',
     ticketId: 'MUN-EXEC-01',
     canScan: true,
     canManualCheckIn: true,
@@ -215,11 +181,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-yousef-saifi',
     name: 'Yousef Saifi',
-    email: 'yousef.saifi@munvenue.org',
-    password: 'exec1002',
+    email: 'yousef.saifi@westmun.org',
+    customTitle: 'Deputy Secretary General',
+    password: '2418',
     role: 'executive',
-    accessKey: '1002',
-    assignedGate: 'MUN Venue',
+    accessKey: '2418',
+    assignedGate: 'Executive Board',
     ticketId: 'MUN-EXEC-02',
     canScan: false,
     canManualCheckIn: false,
@@ -232,11 +199,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-fahad-usg',
     name: 'Fahad',
-    email: 'fahad.usg@munvenue.org',
-    password: 'exec1003',
+    email: 'fahad.usg@westmun.org',
+    customTitle: 'Under Secretary General',
+    password: '3195',
     role: 'executive',
-    accessKey: '1003',
-    assignedGate: 'MUN Venue',
+    accessKey: '3195',
+    assignedGate: 'Executive Board',
     ticketId: 'MUN-EXEC-03',
     canScan: false,
     canManualCheckIn: false,
@@ -249,11 +217,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-muaz',
     name: 'Muaz El Amir',
-    email: 'muaz.elamir@munvenue.org',
-    password: 'exec1004',
+    email: 'muaz.elamir@westmun.org',
+    customTitle: 'Senior Advisor',
+    password: '4820',
     role: 'executive',
-    accessKey: '1004',
-    assignedGate: 'MUN Venue',
+    accessKey: '4820',
+    assignedGate: 'Executive Board',
     ticketId: 'MUN-EXEC-04',
     canScan: false,
     canManualCheckIn: false,
@@ -268,11 +237,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-sec-yusef',
     name: 'Yusef Saad',
-    email: 'yusef.saad@munvenue.org',
-    password: 'sec2001',
+    email: 'yusef.saad@westmun.org',
+    customTitle: 'Head of Male Sec',
+    password: '5714',
     role: 'secretary',
-    accessKey: '2001',
-    assignedGate: 'MUN Venue',
+    accessKey: '5714',
+    assignedGate: 'Secretariat Hub',
     ticketId: 'MUN-SEC-01',
     canScan: false,
     canManualCheckIn: false,
@@ -285,11 +255,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-sec-najla',
     name: 'Najla Rami',
-    email: 'najla.rami@munvenue.org',
-    password: 'sec2002',
+    email: 'najla.rami@westmun.org',
+    customTitle: 'Head of Female Sec',
+    password: '6239',
     role: 'secretary',
-    accessKey: '2002',
-    assignedGate: 'MUN Venue',
+    accessKey: '6239',
+    assignedGate: 'Secretariat Hub',
     ticketId: 'MUN-SEC-02',
     canScan: false,
     canManualCheckIn: false,
@@ -302,11 +273,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-sec-bushra',
     name: 'Bushra Ismail',
-    email: 'bushra.ismail@munvenue.org',
-    password: 'sec2003',
+    email: 'bushra.ismail@westmun.org',
+    customTitle: 'Co-Head of Sec',
+    password: '7841',
     role: 'secretary',
-    accessKey: '2003',
-    assignedGate: 'MUN Venue',
+    accessKey: '7841',
+    assignedGate: 'Secretariat Hub',
     ticketId: 'MUN-SEC-03',
     canScan: false,
     canManualCheckIn: false,
@@ -321,11 +293,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-mkt-naya',
     name: 'Naya Barakat',
-    email: 'naya.barakat@munvenue.org',
-    password: 'mkt3001',
+    email: 'naya.barakat@westmun.org',
+    customTitle: 'Head of Marketing',
+    password: '8326',
     role: 'marketing',
-    accessKey: '3001',
-    assignedGate: 'MUN Venue',
+    accessKey: '8326',
+    assignedGate: 'Marketing Hub',
     ticketId: 'MUN-MKT-01',
     canScan: false,
     canManualCheckIn: false,
@@ -338,11 +311,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-mkt-sama',
     name: 'Sama Sameh',
-    email: 'sama.sameh@munvenue.org',
-    password: 'mkt3002',
+    email: 'sama.sameh@westmun.org',
+    customTitle: 'Co-Head of Marketing',
+    password: '9154',
     role: 'marketing',
-    accessKey: '3002',
-    assignedGate: 'MUN Venue',
+    accessKey: '9154',
+    assignedGate: 'Marketing Hub',
     ticketId: 'MUN-MKT-02',
     canScan: false,
     canManualCheckIn: false,
@@ -355,11 +329,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-mkt-jayda',
     name: 'Jayda Yasser',
-    email: 'jayda.yasser@munvenue.org',
-    password: 'mkt3003',
+    email: 'jayda.yasser@westmun.org',
+    customTitle: 'Marketing Member',
+    password: '1472',
     role: 'marketing',
-    accessKey: '3003',
-    assignedGate: 'MUN Venue',
+    accessKey: '1472',
+    assignedGate: 'Marketing Hub',
     ticketId: 'MUN-MKT-03',
     canScan: false,
     canManualCheckIn: false,
@@ -374,11 +349,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-des-mallak',
     name: 'Mallak Abbas',
-    email: 'mallak.abbas@munvenue.org',
-    password: 'des4001',
+    email: 'mallak.abbas@westmun.org',
+    customTitle: 'Head of Design',
+    password: '2583',
     role: 'designers',
-    accessKey: '4001',
-    assignedGate: 'MUN Venue',
+    accessKey: '2583',
+    assignedGate: 'Design Studio',
     ticketId: 'MUN-DES-01',
     canScan: false,
     canManualCheckIn: false,
@@ -391,11 +367,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-des-saud',
     name: 'Saud Alanazi',
-    email: 'saud.alanazi@munvenue.org',
-    password: 'des4002',
+    email: 'saud.alanazi@westmun.org',
+    customTitle: 'Co-Heads of Design',
+    password: '3691',
     role: 'designers',
-    accessKey: '4002',
-    assignedGate: 'MUN Venue',
+    accessKey: '3691',
+    assignedGate: 'Design Studio',
     ticketId: 'MUN-DES-02',
     canScan: false,
     canManualCheckIn: false,
@@ -408,11 +385,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-des-layan',
     name: 'Layan Ahmed',
-    email: 'layan.ahmed@munvenue.org',
-    password: 'des4003',
+    email: 'layan.ahmed@westmun.org',
+    customTitle: 'Designer',
+    password: '4702',
     role: 'designers',
-    accessKey: '4003',
-    assignedGate: 'MUN Venue',
+    accessKey: '4702',
+    assignedGate: 'Design Studio',
     ticketId: 'MUN-DES-03',
     canScan: false,
     canManualCheckIn: false,
@@ -425,11 +403,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-des-aya',
     name: 'Aya Nezar',
-    email: 'aya.nezar@munvenue.org',
-    password: 'des4004',
+    email: 'aya.nezar@westmun.org',
+    customTitle: 'Designer',
+    password: '5813',
     role: 'designers',
-    accessKey: '4004',
-    assignedGate: 'MUN Venue',
+    accessKey: '5813',
+    assignedGate: 'Design Studio',
     ticketId: 'MUN-DES-04',
     canScan: false,
     canManualCheckIn: false,
@@ -444,11 +423,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-med-hashem',
     name: 'Hashem',
-    email: 'hashem.media@munvenue.org',
-    password: 'med5001',
+    email: 'hashem.media@westmun.org',
+    customTitle: 'Co-Head of Media/Press',
+    password: '6924',
     role: 'media_and_press',
-    accessKey: '5001',
-    assignedGate: 'MUN Venue',
+    accessKey: '6924',
+    assignedGate: 'Media Gallery',
     ticketId: 'MUN-MED-01',
     canScan: false,
     canManualCheckIn: false,
@@ -461,11 +441,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-med-fahad',
     name: 'Fahad Al Kendi',
-    email: 'fahad.alkendi@munvenue.org',
-    password: 'med5002',
+    email: 'fahad.alkendi@westmun.org',
+    customTitle: 'Head of Male Media',
+    password: '7035',
     role: 'media_and_press',
-    accessKey: '5002',
-    assignedGate: 'MUN Venue',
+    accessKey: '7035',
+    assignedGate: 'Media Gallery',
     ticketId: 'MUN-MED-02',
     canScan: false,
     canManualCheckIn: false,
@@ -478,11 +459,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-med-selena',
     name: 'Selena',
-    email: 'selena.media@munvenue.org',
-    password: 'med5003',
+    email: 'selena.media@westmun.org',
+    customTitle: 'Head of Female Media',
+    password: '8146',
     role: 'media_and_press',
-    accessKey: '5003',
-    assignedGate: 'MUN Venue',
+    accessKey: '8146',
+    assignedGate: 'Media Gallery',
     ticketId: 'MUN-MED-03',
     canScan: false,
     canManualCheckIn: false,
@@ -495,11 +477,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-med-mohammed',
     name: 'Mohammed Al Nahas',
-    email: 'mohammed.alnahas@munvenue.org',
-    password: 'med5004',
+    email: 'mohammed.alnahas@westmun.org',
+    customTitle: 'Head of Male Press',
+    password: '9257',
     role: 'media_and_press',
-    accessKey: '5004',
-    assignedGate: 'MUN Venue',
+    accessKey: '9257',
+    assignedGate: 'Press Room',
     ticketId: 'MUN-MED-04',
     canScan: false,
     canManualCheckIn: false,
@@ -512,11 +495,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-med-dana',
     name: 'Dana Alnajar',
-    email: 'dana.alnajar@munvenue.org',
-    password: 'med5005',
+    email: 'dana.alnajar@westmun.org',
+    customTitle: 'Head of Female Press',
+    password: '1368',
     role: 'media_and_press',
-    accessKey: '5005',
-    assignedGate: 'MUN Venue',
+    accessKey: '1368',
+    assignedGate: 'Press Room',
     ticketId: 'MUN-MED-05',
     canScan: false,
     canManualCheckIn: false,
@@ -531,11 +515,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-vol-saad',
     name: 'Saad Usman',
-    email: 'saad.usman@munvenue.org',
-    password: 'vol8001',
+    email: 'saad.usman@westmun.org',
+    customTitle: 'Head of Male Vols',
+    password: '2791',
     role: 'volunteers',
-    accessKey: '8001',
-    assignedGate: 'MUN Venue',
+    accessKey: '2791',
+    assignedGate: 'Floor Operations',
     ticketId: 'MUN-VOL-01',
     canScan: false,
     canManualCheckIn: false,
@@ -548,29 +533,13 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-vol-maram',
     name: 'Maram Ali',
-    email: 'maram.ali@munvenue.org',
-    password: 'vol8002',
+    email: 'maram.ali@westmun.org',
+    customTitle: 'Head of Female Vols',
+    password: '3802',
     role: 'volunteers',
-    accessKey: '8002',
-    assignedGate: 'MUN Venue',
+    accessKey: '3802',
+    assignedGate: 'Floor Operations',
     ticketId: 'MUN-VOL-02',
-    canScan: false,
-    canManualCheckIn: false,
-    canRevokeCheckIn: false,
-    canManageStaff: false,
-    canExportData: false,
-    isActive: true,
-    lastActiveTime: new Date().toISOString(),
-  },
-  {
-    id: 'staff-vol-ahmed-magdi',
-    name: 'Ahmed Magdi (Volunteer)',
-    email: 'ahmed.vol@munvenue.org',
-    password: 'vol8003',
-    role: 'volunteers',
-    accessKey: '8003',
-    assignedGate: 'MUN Venue',
-    ticketId: 'MUN-VOL-03',
     canScan: false,
     canManualCheckIn: false,
     canRevokeCheckIn: false,
@@ -582,11 +551,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-vol-younis',
     name: 'Younis',
-    email: 'younis.vol@munvenue.org',
-    password: 'vol8004',
+    email: 'younis.vol@westmun.org',
+    customTitle: 'Co-Head of Vols',
+    password: '4913',
     role: 'volunteers',
-    accessKey: '8004',
-    assignedGate: 'MUN Venue',
+    accessKey: '4913',
+    assignedGate: 'Floor Operations',
     ticketId: 'MUN-VOL-04',
     canScan: false,
     canManualCheckIn: false,
@@ -601,11 +571,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-log-ahmed',
     name: 'Ahmed El Amir',
-    email: 'ahmed.elamir@munvenue.org',
-    password: 'log9001',
+    email: 'ahmed.elamir@westmun.org',
+    customTitle: 'Head of Logistics',
+    password: '6024',
     role: 'logistics',
-    accessKey: '9001',
-    assignedGate: 'MUN Venue',
+    accessKey: '6024',
+    assignedGate: 'Logistics Center',
     ticketId: 'MUN-LOG-01',
     canScan: false,
     canManualCheckIn: false,
@@ -618,11 +589,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-pr-mazen',
     name: 'Mazen Alaa',
-    email: 'mazen.alaa@munvenue.org',
-    password: 'pr9002',
+    email: 'mazen.alaa@westmun.org',
+    customTitle: 'Head of PR',
+    password: '7135',
     role: 'pr',
-    accessKey: '9002',
-    assignedGate: 'MUN Venue',
+    accessKey: '7135',
+    assignedGate: 'VIP Relations',
     ticketId: 'MUN-PR-01',
     canScan: false,
     canManualCheckIn: false,
@@ -635,11 +607,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-hr-hoorein',
     name: 'Hoorein',
-    email: 'hoorein.hr@munvenue.org',
-    password: 'hr9003',
+    email: 'hoorein.hr@westmun.org',
+    customTitle: 'Head of HR',
+    password: '8246',
     role: 'hr',
-    accessKey: '9003',
-    assignedGate: 'MUN Venue',
+    accessKey: '8246',
+    assignedGate: 'HR Operations',
     ticketId: 'MUN-HR-01',
     canScan: false,
     canManualCheckIn: false,
@@ -652,11 +625,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-hr-seif',
     name: 'Seif Ayman',
-    email: 'seif.ayman@munvenue.org',
-    password: 'hr9004',
+    email: 'seif.ayman@westmun.org',
+    customTitle: 'Head of HR',
+    password: '9357',
     role: 'hr',
-    accessKey: '9004',
-    assignedGate: 'MUN Venue',
+    accessKey: '9357',
+    assignedGate: 'HR Operations',
     ticketId: 'MUN-HR-02',
     canScan: false,
     canManualCheckIn: false,
@@ -669,11 +643,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-cer-sultana',
     name: 'Sultana',
-    email: 'sultana.ceremonies@munvenue.org',
-    password: 'cer9005',
+    email: 'sultana.ceremonies@westmun.org',
+    customTitle: 'Head of Ceremonies',
+    password: '1579',
     role: 'ceremonies',
-    accessKey: '9005',
-    assignedGate: 'MUN Venue',
+    accessKey: '1579',
+    assignedGate: 'Ceremonies Stage',
     ticketId: 'MUN-CER-01',
     canScan: false,
     canManualCheckIn: false,
@@ -686,11 +661,12 @@ const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-dcc-majd',
     name: 'Majd',
-    email: 'majd.dcc@munvenue.org',
-    password: 'dcc9006',
+    email: 'majd.dcc@westmun.org',
+    customTitle: 'Head of DCC',
+    password: '2680',
     role: 'dcc',
-    accessKey: '9006',
-    assignedGate: 'MUN Venue',
+    accessKey: '2680',
+    assignedGate: 'DCC Control Room',
     ticketId: 'MUN-DCC-01',
     canScan: false,
     canManualCheckIn: false,
@@ -996,17 +972,6 @@ const INITIAL_GUESTS: Guest[] = [
     scanCount: 0,
   },
   {
-    id: 'g-vol-ahmed',
-    name: 'Ahmed Magdi',
-    ticketId: 'MUN-VOL-03',
-    category: 'Staff',
-    role: 'Co-Head of Vols',
-    tableOrSeat: 'Floor Operations',
-    notes: 'Volunteers (Vols) Department',
-    status: 'Pending',
-    scanCount: 0,
-  },
-  {
     id: 'g-vol-younis',
     name: 'Younis',
     ticketId: 'MUN-VOL-04',
@@ -1278,43 +1243,178 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [staffMembers]
   );
 
-  // General login method validating username & confidential password
+  // Exact Multi-User Login Validation against existing members database
   const login = useCallback(
-    (identifier: string, pass?: string): { success: boolean; user?: StaffMember; error?: string } => {
-      const authResult = authenticateByIdentifier(identifier);
-      if (!authResult.success) {
-        return authResult;
+    (rawUsername: string, rawPassword?: string): { success: boolean; user?: StaffMember; error?: string } => {
+      if (!rawUsername || !rawUsername.trim()) {
+        return { success: false, error: '❌ Invalid username.' };
       }
 
-      const user = authResult.user!;
-      if (!pass || !pass.trim()) {
+      // Forgiving username normalization:
+      // Ignore uppercase vs lowercase, extra spaces, leading spaces, trailing spaces, multiple spaces
+      const trimmed = rawUsername.trim().toLowerCase();
+      const collapsed = trimmed.replace(/\s+/g, ' ');
+      const stripped = trimmed.replace(/\s+/g, '');
+
+      // Find matching candidate(s) in existing staff members
+      const matchingUsers = staffMembers.filter((s) => {
+        const sNameLower = s.name.trim().toLowerCase();
+        const sNameCollapsed = sNameLower.replace(/\s+/g, ' ');
+        const sNameStripped = sNameLower.replace(/\s+/g, '');
+
+        const sEmailLower = s.email.trim().toLowerCase();
+        const sEmailUser = sEmailLower.split('@')[0];
+        const sEmailStripped = sEmailLower.replace(/\s+/g, '');
+
+        return (
+          sNameCollapsed === collapsed ||
+          sNameStripped === stripped ||
+          sEmailLower === trimmed ||
+          sEmailStripped === stripped ||
+          sEmailUser === collapsed ||
+          sEmailUser === stripped
+        );
+      });
+
+      if (matchingUsers.length === 0) {
         return {
           success: false,
-          error: 'Please enter your confidential password.',
+          error: '❌ Invalid username.',
         };
       }
 
-      const cleanPass = pass.trim();
-      const isAhmedMagdi =
-        identifier.toLowerCase().replace(/\s+/g, '') === 'ahmedmagdi' ||
-        identifier.toLowerCase().includes('ahmedmagdialkik');
-
-      const passMatches =
-        user.password === cleanPass ||
-        (user.role === 'it' && isAhmedMagdi && cleanPass === '344') ||
-        user.accessKey === cleanPass;
-
-      if (!passMatches) {
+      // Exact case-sensitive password match
+      if (!rawPassword) {
         return {
           success: false,
-          error: `Incorrect confidential password for ${user.name}.`,
+          error: '❌ Incorrect password.',
         };
       }
 
-      setCurrentUser(user);
-      return { success: true, user };
+      // Match user with exact password (or trimmed numeric pin)
+      const cleanPass = rawPassword.trim();
+      const authenticatedUser = matchingUsers.find(
+        (s) => s.password === rawPassword || s.password === cleanPass || s.accessKey === cleanPass
+      );
+
+      if (!authenticatedUser) {
+        return {
+          success: false,
+          error: '❌ Incorrect password.',
+        };
+      }
+
+      if (!authenticatedUser.isActive) {
+        return {
+          success: false,
+          error: '❌ Account inactive.',
+        };
+      }
+
+      setCurrentUser(authenticatedUser);
+      return { success: true, user: authenticatedUser };
     },
-    [authenticateByIdentifier]
+    [staffMembers]
+  );
+
+  // Helper to generate a unique 4-digit numeric password (0000 - 9999)
+  const generateUnique4DigitPassword = useCallback(
+    (excludeStaffId?: string): string => {
+      const existingPasswords = new Set(
+        staffMembers
+          .filter((s) => s.id !== excludeStaffId)
+          .map((s) => s.password)
+          .filter(Boolean)
+      );
+      existingPasswords.add('344'); // Reserved strictly for Ahmed Magdi
+
+      for (let attempts = 0; attempts < 10000; attempts++) {
+        const pin = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        if (!existingPasswords.has(pin)) {
+          return pin;
+        }
+      }
+      return String(Math.floor(1000 + Math.random() * 9000));
+    },
+    [staffMembers]
+  );
+
+  // Reset a staff member's password (Administrator Feature)
+  const resetStaffPassword = useCallback(
+    (staffId: string, customPassword?: string): { success: boolean; newPassword?: string; error?: string } => {
+      const target = staffMembers.find((s) => s.id === staffId);
+      if (!target) {
+        return { success: false, error: 'Member not found.' };
+      }
+
+      // Ahmed Magdi Exception: Password MUST remain 344
+      const isAhmedMagdi =
+        target.id === 'staff-it-ahmed' ||
+        target.name.trim().toLowerCase() === 'ahmed magdi';
+
+      if (isAhmedMagdi) {
+        return {
+          success: false,
+          error: 'The account belonging to Ahmed Magdi must use the password: 344. It cannot be altered.',
+        };
+      }
+
+      let newPin = '';
+      if (customPassword && customPassword.trim()) {
+        const clean = customPassword.trim();
+        if (!/^\d{4}$/.test(clean)) {
+          return {
+            success: false,
+            error: 'Password must be exactly 4 numeric digits (0000–9999).',
+          };
+        }
+
+        // Verify uniqueness across all 32 members
+        const collision = staffMembers.find(
+          (s) => s.id !== staffId && (s.password === clean || s.accessKey === clean)
+        );
+        if (collision) {
+          return {
+            success: false,
+            error: `Password ${clean} is already assigned to ${collision.name}. No two users may share the same password.`,
+          };
+        }
+        if (clean === '344') {
+          return {
+            success: false,
+            error: 'Password 344 is reserved exclusively for Ahmed Magdi.',
+          };
+        }
+        newPin = clean;
+      } else {
+        newPin = generateUnique4DigitPassword(staffId);
+      }
+
+      // Persist permanently with user's account
+      setStaffMembers((prev) =>
+        prev.map((s) =>
+          s.id === staffId
+            ? { ...s, password: newPin, accessKey: newPin }
+            : s
+        )
+      );
+
+      // If current logged-in user is this member, update active session
+      if (currentUser && currentUser.id === staffId) {
+        setCurrentUser((prev) => (prev ? { ...prev, password: newPin, accessKey: newPin } : null));
+      }
+
+      return { success: true, newPassword: newPin };
+    },
+    [staffMembers, currentUser, generateUnique4DigitPassword]
+  );
+
+  // Generate a new random 4-digit password for a specific member
+  const generateNewStaffPassword = useCallback(
+    (staffId: string): { success: boolean; newPassword?: string; error?: string } => {
+      return resetStaffPassword(staffId);
+    },
+    [resetStaffPassword]
   );
 
   const register = useCallback(
@@ -2040,6 +2140,8 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setActiveTab,
         login,
         authenticateByIdentifier,
+        resetStaffPassword,
+        generateNewStaffPassword,
         register,
         logout,
         switchAccountFast,
