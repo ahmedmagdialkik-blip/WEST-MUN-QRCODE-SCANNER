@@ -60,11 +60,11 @@ interface VenueContextType {
   };
 }
 
-const STORAGE_KEY_GUESTS = 'west_mun_guests_v13_all_security';
-const STORAGE_KEY_STAFF = 'west_mun_staff_v13_all_security';
-const STORAGE_KEY_SETTINGS = 'west_mun_settings_v13_all_security';
-const STORAGE_KEY_LOGS = 'west_mun_logs_v13_all_security';
-const STORAGE_KEY_AUTH = 'west_mun_auth_v13_all_security';
+const STORAGE_KEY_GUESTS = 'west_mun_guests_v14_trends_and_eggs';
+const STORAGE_KEY_STAFF = 'west_mun_staff_v14_trends_and_eggs';
+const STORAGE_KEY_SETTINGS = 'west_mun_settings_v14_trends_and_eggs';
+const STORAGE_KEY_LOGS = 'west_mun_logs_v14_trends_and_eggs';
+const STORAGE_KEY_AUTH = 'west_mun_auth_v14_trends_and_eggs';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -252,9 +252,9 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-fahad-usg',
-    name: 'Fahad',
-    email: 'fahad.usg@westmun.org',
-    customTitle: 'Under Secretary General',
+    name: 'Zain Firas',
+    email: 'zain.firas@westmun.org',
+    customTitle: 'Under Secretary-General',
     password: '3195',
     role: 'executive',
     accessKey: '3195',
@@ -326,8 +326,8 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-mkt-jayda',
-    name: 'Jayda Yasser',
-    email: 'jayda.yasser@westmun.org',
+    name: 'Jadiya',
+    email: 'jadiya.marketing@westmun.org',
     customTitle: 'Marketing Member',
     password: '1472',
     role: 'marketing',
@@ -456,8 +456,8 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-med-selena',
-    name: 'Selena',
-    email: 'selena.media@westmun.org',
+    name: 'Noor',
+    email: 'noor.media@westmun.org',
     customTitle: 'Head of Female Media',
     password: '8146',
     role: 'media_and_press',
@@ -640,7 +640,7 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-cer-sultana',
-    name: 'Sultana',
+    name: 'Sultana Al Fajar',
     email: 'sultana.ceremonies@westmun.org',
     customTitle: 'Head of Ceremonies',
     password: '1579',
@@ -704,10 +704,10 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-exec-fahad',
-    name: 'Fahad',
+    name: 'Zain Firas',
     ticketId: 'MUN-EXEC-03',
     category: 'VIP',
-    role: 'Under Secretary General',
+    role: 'Under Secretary-General',
     tableOrSeat: 'Executive Board',
     notes: 'Executive Board & Leadership',
     status: 'Pending',
@@ -750,7 +750,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-mkt-jayda',
-    name: 'Jayda Yasser',
+    name: 'Jadiya',
     ticketId: 'MUN-MKT-03',
     category: 'Staff',
     role: 'Marketing Member',
@@ -831,7 +831,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-med-selena',
-    name: 'Selena',
+    name: 'Noor',
     ticketId: 'MUN-MED-03',
     category: 'Press',
     role: 'Head of Female Media',
@@ -1026,7 +1026,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-cer-sultana',
-    name: 'Sultana',
+    name: 'Sultana Al Fajar',
     ticketId: 'MUN-CER-01',
     category: 'Staff',
     role: 'Head of Ceremonies',
@@ -1287,19 +1287,34 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const sNameLower = s.name.trim().toLowerCase();
         const sNameCollapsed = sNameLower.replace(/\s+/g, ' ');
         const sNameStripped = sNameLower.replace(/\s+/g, '');
+        const sFirstName = sNameCollapsed.split(' ')[0];
 
         const sEmailLower = s.email.trim().toLowerCase();
         const sEmailUser = sEmailLower.split('@')[0];
         const sEmailStripped = sEmailLower.replace(/\s+/g, '');
 
-        return (
+        // Standard name/email match
+        if (
           sNameCollapsed === collapsed ||
           sNameStripped === stripped ||
+          sFirstName === collapsed ||
           sEmailLower === trimmed ||
           sEmailStripped === stripped ||
           sEmailUser === collapsed ||
           sEmailUser === stripped
-        );
+        ) {
+          return true;
+        }
+
+        // Account Aliases for USG and Freshmen
+        if (s.id === 'staff-fahad-usg' && (collapsed === 'zain firas' || collapsed === 'zain' || collapsed === 'fahad')) return true;
+        if (s.id === 'staff-cer-sultana' && (collapsed === 'sultana al fajar' || collapsed === 'sultana')) return true;
+        if (s.id === 'staff-mkt-naya' && (collapsed === 'naya' || collapsed === 'naya barakat')) return true;
+        if (s.id === 'staff-mkt-jayda' && (collapsed === 'jadiya' || collapsed === 'jayda' || collapsed === 'jayda yasser')) return true;
+        if (s.id === 'staff-med-selena' && (collapsed === 'noor' || collapsed === 'nour' || collapsed === 'selena')) return true;
+        if (s.id === 'staff-med-dana' && (collapsed === 'dana alnajar' || collapsed === 'dana')) return true;
+
+        return false;
       });
 
       if (matchingUsers.length === 0) {

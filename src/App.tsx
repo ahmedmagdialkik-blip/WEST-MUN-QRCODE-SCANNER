@@ -18,11 +18,12 @@ import { AuthModal } from './components/Auth/AuthModal';
 import { LuxuryIntro } from './components/Intro/LuxuryIntro';
 import { ExecutiveLoginPage } from './components/Auth/ExecutiveLoginPage';
 import { WelcomeGreetingOverlay } from './components/Auth/WelcomeGreetingOverlay';
-import { DanaFreshmanEasterEgg } from './components/EasterEgg/DanaFreshmanEasterEgg';
-import { isDanaAlnajar } from './utils/easterEggAuth';
+import { FreshmanWelcomeEasterEgg } from './components/EasterEgg/DanaFreshmanEasterEgg';
+import { UnderSecretaryWelcomeEasterEgg } from './components/EasterEgg/UnderSecretaryWelcomeEasterEgg';
+import { getAccountEasterEgg } from './utils/easterEggAuth';
 import { isScannerOrAdminRole, ROLE_LABELS, StaffMember } from './types/venue';
 
-type AppFlowStage = 'intro' | 'login' | 'dana_easter_egg' | 'welcome' | 'homepage';
+type AppFlowStage = 'intro' | 'login' | 'freshman_easter_egg' | 'usg_easter_egg' | 'welcome' | 'homepage';
 
 function MainVenueContent() {
   const {
@@ -44,7 +45,13 @@ function MainVenueContent() {
 
   // Sync state if user logs out
   useEffect(() => {
-    if (!isAuthenticated && (flowStage === 'homepage' || flowStage === 'welcome' || flowStage === 'dana_easter_egg')) {
+    if (
+      !isAuthenticated &&
+      (flowStage === 'homepage' ||
+        flowStage === 'welcome' ||
+        flowStage === 'freshman_easter_egg' ||
+        flowStage === 'usg_easter_egg')
+    ) {
       try {
         localStorage.removeItem('west_mun_auth_session');
       } catch {
@@ -63,11 +70,16 @@ function MainVenueContent() {
     }
 
     const activeUser = user || currentUser;
-    if (activeUser && isDanaAlnajar(activeUser.name)) {
-      // Pause normal transition and trigger Dana Alnajar freshman easter egg
-      setFlowStage('dana_easter_egg');
+    const egg = activeUser ? getAccountEasterEgg(activeUser.name) : null;
+
+    if (egg === 'freshman') {
+      // Special Freshman welcome animation (Dana Alnajar, Sultana Al Fajar, Naya, Jadiya, Noor)
+      setFlowStage('freshman_easter_egg');
+    } else if (egg === 'under_secretary') {
+      // Special Under Secretary-General fanfare animation (Zain Firas)
+      setFlowStage('usg_easter_egg');
     } else {
-      // Standard flow for every other user
+      // Standard login process for all other users
       setFlowStage('welcome');
     }
   };
@@ -88,14 +100,32 @@ function MainVenueContent() {
   }
 
   // 2. Stage: Executive Multi-User Login Page
-  if (flowStage === 'login' || (!isAuthenticated && flowStage !== 'welcome' && flowStage !== 'dana_easter_egg')) {
+  if (
+    flowStage === 'login' ||
+    (!isAuthenticated &&
+      flowStage !== 'welcome' &&
+      flowStage !== 'freshman_easter_egg' &&
+      flowStage !== 'usg_easter_egg')
+  ) {
     return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
   }
 
-  // Special Hidden Easter Egg: Dana Alnajar Freshman Welcome
-  if (flowStage === 'dana_easter_egg') {
+  // Special Easter Egg: Freshman Welcome (Dana Alnajar, Sultana Al Fajar, Naya, Jadiya, Noor)
+  if (flowStage === 'freshman_easter_egg') {
     return (
-      <DanaFreshmanEasterEgg
+      <FreshmanWelcomeEasterEgg
+        displayName={currentUser?.name || 'Freshman'}
+        onComplete={() => {
+          setFlowStage('homepage');
+        }}
+      />
+    );
+  }
+
+  // Special Easter Egg: Under Secretary-General Welcome (Zain Firas)
+  if (flowStage === 'usg_easter_egg') {
+    return (
+      <UnderSecretaryWelcomeEasterEgg
         onComplete={() => {
           setFlowStage('homepage');
         }}

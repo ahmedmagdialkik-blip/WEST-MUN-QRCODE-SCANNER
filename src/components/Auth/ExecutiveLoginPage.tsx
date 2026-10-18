@@ -5,7 +5,7 @@ import { StaffMember } from '../../types/venue';
 import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
 import { vibrateSuccess, vibrateWarning } from '../../utils/haptics';
 import officialLogoUrl from '../../assets/images/west_mun_logo_official.jpg';
-import { isDanaAlnajar } from '../../utils/easterEggAuth';
+import { getAccountEasterEgg } from '../../utils/easterEggAuth';
 
 interface ExecutiveLoginPageProps {
   onAuthenticated: (user: StaffMember) => void;
@@ -59,8 +59,9 @@ export const ExecutiveLoginPage: React.FC<ExecutiveLoginPageProps> = ({
     playSuccessChime();
     vibrateSuccess();
 
-    // Check if the authenticated user is Dana Alnajar (trigger special easter egg immediately)
-    if (isDanaAlnajar(result.user.name)) {
+    // Check if the authenticated user has an account-specific welcome animation
+    const easterEgg = getAccountEasterEgg(result.user.name);
+    if (easterEgg) {
       onAuthenticated(result.user);
       return;
     }

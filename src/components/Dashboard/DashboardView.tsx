@@ -14,6 +14,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { playClickSound } from '../../utils/audio';
+import { CheckInTrendsChartWidget } from './CheckInTrendsChartWidget';
 
 export const DashboardView: React.FC = () => {
   const { stats, settings, guests, logs, undoCheckIn, currentUser, setActiveTab } = useVenue();
@@ -162,6 +163,9 @@ export const DashboardView: React.FC = () => {
           <p className="text-[10px] text-neutral-400 font-serif mt-0.5">Last 10 minutes</p>
         </div>
       </div>
+
+      {/* Summary Stats Widget: Guest Check-In Trends Chart */}
+      <CheckInTrendsChartWidget />
 
       {/* Category Breakdown */}
       <div className="bg-[#14100e] border border-[#B08D57]/30 p-4 shadow-sm space-y-3">
