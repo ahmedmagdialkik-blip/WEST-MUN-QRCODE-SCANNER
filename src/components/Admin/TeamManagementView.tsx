@@ -80,7 +80,7 @@ export const TeamManagementView: React.FC = () => {
   // Security, IT, Super Admin, and HR have clearance to view everyone's username and password
   const canViewCredentials = isSecurity || isIT || isSuperAdmin || isHR;
   const isAdmin = canViewCredentials;
-  const canAddStaff = isSuperAdmin || isHR || isSecurity || isIT;
+  const canAddStaff = true;
 
   const [revealAllPasswords, setRevealAllPasswords] = useState<boolean>(false);
 
@@ -132,6 +132,8 @@ export const TeamManagementView: React.FC = () => {
 
   const openAddStaffModal = (defaultRole?: StaffRole) => {
     playClickSound();
+    setName('');
+    setEmail('');
     if (defaultRole) {
       setRole(defaultRole);
     } else if (roleFilter !== 'all' && (roleFilter in ROLE_LABELS)) {
@@ -148,7 +150,11 @@ export const TeamManagementView: React.FC = () => {
 
   const handleAddStaff = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    const cleanName = name.trim();
+    if (!cleanName) {
+      showToast('error', 'Please enter a name for the member.');
+      return;
+    }
 
     // Use the EXACT role picked by the user in the form modal
     const assignedRole: StaffRole = role;
@@ -157,9 +163,13 @@ export const TeamManagementView: React.FC = () => {
     const generatedTicketId = `MUN-STAFF-${assignedRole.toUpperCase()}-${pin}`;
     const roleTitle = ROLE_LABELS[assignedRole]?.title || assignedRole;
 
+    const emailToUse =
+      email.trim() ||
+      `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@westmun.org`;
+
     addStaffMember({
-      name: name.trim(),
-      email: email.trim(),
+      name: cleanName,
+      email: emailToUse,
       password: pin,
       role: assignedRole,
       customTitle: roleTitle,
@@ -176,7 +186,11 @@ export const TeamManagementView: React.FC = () => {
     });
 
     playSuccessChime();
-    showToast('success', `Member ${name.trim()} added with role ${roleTitle} (PIN ${pin})`);
+    showToast('success', `Added ${cleanName} as ${roleTitle} (PIN: ${pin})`);
+
+    // Reset filters and search so the new member is immediately visible at the top
+    setRoleFilter('all');
+    setSearchQuery('');
     setName('');
     setEmail('');
     setIsAddStaffOpen(false);
@@ -280,7 +294,7 @@ export const TeamManagementView: React.FC = () => {
             className="px-3 py-1.5 bg-[#1b120c] hover:bg-[#281b12] text-[#d4af37] hover:text-[#F7F2EA] text-xs font-serif tracking-wider flex items-center gap-1.5 transition cursor-pointer border border-[#c99b58]/60 shadow-sm"
           >
             <Printer className="w-3.5 h-3.5 text-[#c99b58]" />
-            <span>Print All 32 Passes</span>
+            <span>Print All {staffMembers.length} Passes</span>
           </button>
 
           {canAddStaff && (
@@ -736,13 +750,14 @@ export const TeamManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-serif text-[#B08D57] mb-1">Official Email</label>
+                <label className="block text-xs font-serif text-[#B08D57] mb-1">
+                  Official Email <span className="text-neutral-500 font-sans font-normal text-[10px]">(optional — auto-generates if blank)</span>
+                </label>
                 <input
-                  type="email"
-                  required
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. elena.rostova@westmun.org"
+                  placeholder="e.g. elena.rostova@westmun.org (or leave blank to auto-generate)"
                   className="w-full bg-[#0d0a08] border border-[#B08D57]/40 px-3 py-2 text-xs text-[#F5F2EA] focus:outline-none focus:border-[#B08D57] font-serif"
                 />
               </div>
@@ -754,7 +769,6 @@ export const TeamManagementView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    required
                     maxLength={4}
                     value={accessKey}
                     onChange={(e) => {

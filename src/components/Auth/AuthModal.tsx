@@ -80,6 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       name: regName.trim(),
       email: regEmail.trim(),
       role: regRole,
+      password: pin,
       accessKey: pin,
       assignedGate: 'MUN Venue',
       canScan,

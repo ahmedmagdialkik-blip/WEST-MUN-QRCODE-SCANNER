@@ -21,7 +21,7 @@ export const BatchCredentialsModal: React.FC<BatchCredentialsModalProps> = ({
 
   const handleCopyAll = () => {
     playClickSound();
-    let text = `WEST MUN • OFFICIAL ONBOARDING ROSTER (32 REGISTERED MEMBERS)\n`;
+    let text = `WEST MUN • OFFICIAL ONBOARDING ROSTER (${staffMembers.length} REGISTERED MEMBERS)\n`;
     text += `Generated: ${new Date().toLocaleDateString()}\n`;
     text += `========================================================================================\n`;
     text += `NAME                 | ROLE                       | USERNAME           | PASSWORD | TICKET ID\n`;
@@ -61,7 +61,7 @@ export const BatchCredentialsModal: React.FC<BatchCredentialsModalProps> = ({
               className="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-[#F5F2EA] font-serif"
               style={{ fontFamily: "'Cinzel', serif" }}
             >
-              All 32 Member Credentials Roster
+              All {staffMembers.length} Member Credentials Roster
             </h2>
             <span className="text-[10px] px-2 py-0.5 bg-[#251d17] text-[#D4AF37] border border-[#B08D57]/40 font-mono">
               {staffMembers.length} Accounts

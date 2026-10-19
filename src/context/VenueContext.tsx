@@ -2216,15 +2216,19 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addStaffMember = useCallback((staffData: Omit<StaffMember, 'id'>): StaffMember => {
     const canScan = isScannerOrAdminRole(staffData.role);
-    const accessPin = staffData.accessKey || String(Math.floor(1000 + Math.random() * 9000));
+    const accessPin = staffData.accessKey || staffData.password || String(Math.floor(1000 + Math.random() * 9000));
     const ticketId = staffData.ticketId || `MUN-STAFF-${staffData.role.substring(0, 3).toUpperCase()}-${accessPin}`;
     const roleTitle = staffData.customTitle || ROLE_LABELS[staffData.role]?.title || staffData.role;
 
     const newStaff: StaffMember = {
       ...staffData,
-      id: `staff-${Date.now()}`,
-      customTitle: roleTitle,
+      id: `staff-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: staffData.name.trim(),
+      email: staffData.email.trim(),
+      password: staffData.password || accessPin,
       accessKey: accessPin,
+      role: staffData.role,
+      customTitle: roleTitle,
       ticketId,
       assignedGate: staffData.assignedGate || 'MUN Venue',
       canScan,
@@ -2235,10 +2239,11 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isActive: true,
       lastActiveTime: new Date().toISOString(),
     };
-    setStaffMembers((prev) => [...prev, newStaff]);
+
+    // Prepend so the newly added person is immediately visible at the top of the list!
+    setStaffMembers((prev) => [newStaff, ...prev]);
 
     setGuests((prev) => [
-      ...prev,
       {
         id: `g-staff-${newStaff.id}`,
         name: newStaff.name,
@@ -2249,6 +2254,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         status: 'Pending',
         scanCount: 0,
       },
+      ...prev,
     ]);
 
     return newStaff;
