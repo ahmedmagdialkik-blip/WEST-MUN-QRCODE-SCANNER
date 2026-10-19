@@ -228,6 +228,22 @@ function createInitialUsers(): UserAccount[] {
       lockedUntil: null,
     },
     {
+      id: 'staff-cer-sultana',
+      username: 'sultana.alfaraj',
+      displayName: 'Sultana Al Faraj',
+      passwordHash: bcrypt.hashSync('1579', 10),
+      email: 'sultana.ceremonies@westmun.org',
+      role: 'ceremonies',
+      customTitle: 'Head of Ceremonies',
+      assignedGate: 'Ceremonies Stage',
+      ticketId: 'MUN-CER-01',
+      profilePicture: officialLogoImage,
+      lastLogin: null,
+      accountStatus: 'active',
+      failedAttempts: 0,
+      lockedUntil: null,
+    },
+    {
       id: 'usr-david-miller-disabled-uuid',
       username: 'david.miller',
       displayName: 'David Miller',
@@ -259,7 +275,7 @@ class UserAuthService {
       const storedUsers = localStorage.getItem(STORAGE_KEY_USERS);
       if (storedUsers) {
         const parsed: UserAccount[] = JSON.parse(storedUsers);
-        // Ensure Fahad Alkendi and Dana Al Najjar are normalized in existing storage
+        // Ensure Fahad Alkendi, Dana Al Najjar, and Sultana Al Faraj are normalized in existing storage
         let updated = false;
         parsed.forEach((u) => {
           if (u.id === 'staff-med-fahad' || u.username.includes('fahad') || u.displayName.toLowerCase().includes('fahad')) {
@@ -274,9 +290,15 @@ class UserAuthService {
             u.email = 'dana.alnajjar@westmun.org';
             updated = true;
           }
+          if (u.id === 'staff-cer-sultana' || u.username.includes('sultana') || u.displayName.toLowerCase().includes('sultana') || u.displayName.toLowerCase().includes('fajar')) {
+            u.displayName = 'Sultana Al Faraj';
+            u.username = 'sultana.alfaraj';
+            u.email = 'sultana.ceremonies@westmun.org';
+            updated = true;
+          }
         });
 
-        // Ensure both accounts exist
+        // Ensure accounts exist
         if (!parsed.some((u) => u.displayName === 'Fahad Alkendi')) {
           parsed.push({
             id: 'staff-med-fahad',
@@ -308,6 +330,26 @@ class UserAuthService {
             customTitle: 'Head of Female Press',
             assignedGate: 'Press Room',
             ticketId: 'MUN-MED-05',
+            profilePicture: officialLogoImage,
+            lastLogin: null,
+            accountStatus: 'active',
+            failedAttempts: 0,
+            lockedUntil: null,
+          });
+          updated = true;
+        }
+
+        if (!parsed.some((u) => u.displayName === 'Sultana Al Faraj')) {
+          parsed.push({
+            id: 'staff-cer-sultana',
+            username: 'sultana.alfaraj',
+            displayName: 'Sultana Al Faraj',
+            passwordHash: bcrypt.hashSync('1579', 10),
+            email: 'sultana.ceremonies@westmun.org',
+            role: 'ceremonies',
+            customTitle: 'Head of Ceremonies',
+            assignedGate: 'Ceremonies Stage',
+            ticketId: 'MUN-CER-01',
             profilePicture: officialLogoImage,
             lastLogin: null,
             accountStatus: 'active',
@@ -378,16 +420,38 @@ class UserAuthService {
   public findUserByUsername(rawUsername: string): UserAccount | undefined {
     const normalized = rawUsername.trim().toLowerCase();
     if (!normalized) return undefined;
+    const stripped = normalized.replace(/[^a-z0-9]/g, '');
 
     return this.users.find((u) => {
       const uName = u.username.toLowerCase();
       const uEmail = u.email.toLowerCase();
-      // Match full username, or email before @, or exact email
+      const uDisplay = u.displayName.toLowerCase();
+      const uDisplayStripped = uDisplay.replace(/[^a-z0-9]/g, '');
       const emailPrefix = uEmail.split('@')[0];
+
+      // Specific aliases for Sultana Al Faraj
+      if (u.id === 'staff-cer-sultana') {
+        if (
+          normalized === 'sultana' ||
+          normalized === 'sultana al faraj' ||
+          normalized === 'sultana alfaraj' ||
+          normalized === 'sultana al-faraj' ||
+          normalized === 'sultana al fajar' ||
+          normalized === 'sultana.alfaraj' ||
+          normalized === 'sultana.alfajar' ||
+          stripped === 'sultanaalfaraj' ||
+          stripped === 'sultanaalfajar'
+        ) {
+          return true;
+        }
+      }
+
       return (
         uName === normalized ||
         uEmail === normalized ||
         emailPrefix === normalized ||
+        uDisplay === normalized ||
+        uDisplayStripped === stripped ||
         // Also support first-name alias (e.g. 'sarah' -> 'sarah.johnson', 'ahmed' -> 'ahmed.magdi')
         uName.split('.')[0] === normalized
       );

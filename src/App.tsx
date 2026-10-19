@@ -90,7 +90,7 @@ function MainVenueContent() {
     const egg = activeUser ? (getAccountEasterEgg(activeUser.name) || getAccountEasterEgg(activeUser.customTitle)) : null;
 
     if (egg === 'freshman') {
-      // Special Freshman welcome animation (Sultana Al Fajar, Naya, Jadiya, Noor)
+      // Special Freshman welcome animation (Sultana Al Faraj, Naya, Jadiya, Noor)
       setFlowStage('freshman_easter_egg');
     } else if (egg === 'under_secretary') {
       // Special Under Secretary-General fanfare animation (Zain Firas)
@@ -140,7 +140,7 @@ function MainVenueContent() {
     );
   }
 
-  // Special Easter Egg: Freshman Welcome (Dana Al Najjar, Sultana Al Fajar, Naya, Jadiya, Noor)
+  // Special Easter Egg: Freshman Welcome (Dana Al Najjar, Sultana Al Faraj, Naya, Jadiya, Noor)
   if (flowStage === 'freshman_easter_egg') {
     return (
       <FreshmanWelcomeEasterEgg

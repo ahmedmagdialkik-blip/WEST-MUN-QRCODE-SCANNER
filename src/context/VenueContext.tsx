@@ -640,7 +640,7 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-cer-sultana',
-    name: 'Sultana Al Fajar',
+    name: 'Sultana Al Faraj',
     email: 'sultana.ceremonies@westmun.org',
     customTitle: 'Head of Ceremonies',
     password: '1579',
@@ -1044,7 +1044,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-cer-sultana',
-    name: 'Sultana Al Fajar',
+    name: 'Sultana Al Faraj',
     ticketId: 'MUN-CER-01',
     category: 'Staff',
     role: 'Head of Ceremonies',
@@ -1110,8 +1110,8 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (g.id === 'g-med-dana' || g.name.toLowerCase().includes('dana')) {
             return { ...g, id: 'g-med-dana', name: 'Dana Al Najjar', role: 'Head of Female Press' };
           }
-          if (g.id === 'g-cer-sultana') {
-            return { ...g, name: 'Sultana Al Fajar', role: 'Head of Ceremonies' };
+          if (g.id === 'g-cer-sultana' || g.name.toLowerCase().includes('sultana') || g.name.toLowerCase().includes('fajar')) {
+            return { ...g, id: 'g-cer-sultana', name: 'Sultana Al Faraj', role: 'Head of Ceremonies' };
           }
           return g;
         });
@@ -1255,12 +1255,12 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               ticketId: 'MUN-MED-05',
             };
           }
-          // Sultana Al Fajar
-          if (s.id === 'staff-cer-sultana') {
+          // Sultana Al Faraj
+          if (s.id === 'staff-cer-sultana' || s.name.toLowerCase().includes('sultana') || s.name.toLowerCase().includes('fajar')) {
             return {
               ...s,
               id: 'staff-cer-sultana',
-              name: 'Sultana Al Fajar',
+              name: 'Sultana Al Faraj',
               email: 'sultana.ceremonies@westmun.org',
               customTitle: 'Head of Ceremonies',
               role: 'ceremonies' as StaffRole,
@@ -1588,7 +1588,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (s.id === 'staff-fahad-usg' && (collapsed === 'zain firas' || collapsed === 'zain' || collapsed === 'usg')) return true;
         if (s.id === 'staff-med-fahad' && (collapsed === 'fahad alkendi' || collapsed === 'fahad al kendi' || collapsed === 'fahad' || collapsed === 'fahad.alkendi' || collapsed === 'fahad al kednd' || collapsed === 'head of media and press' || collapsed === 'head of media and pressi')) return true;
         if (s.id === 'staff-dcc-lily' && (collapsed === 'lily rabia' || collapsed === 'lily' || collapsed.includes('lily rabia') || collapsed === 'co head dcc' || collapsed === 'lily rabia-co head dcc')) return true;
-        if (s.id === 'staff-cer-sultana' && (collapsed === 'sultana al fajar' || collapsed === 'sultana')) return true;
+        if (s.id === 'staff-cer-sultana' && (collapsed === 'sultana al faraj' || collapsed === 'sultana alfaraj' || collapsed === 'sultana al-faraj' || collapsed === 'sultana al fajar' || collapsed === 'sultana' || collapsed === 'sultana.alfaraj')) return true;
         if (s.id === 'staff-mkt-naya' && (collapsed === 'naya' || collapsed === 'naya barakat')) return true;
         if (s.id === 'staff-mkt-jayda' && (collapsed === 'jadiya' || collapsed === 'jayda' || collapsed === 'jayda yasser')) return true;
         if (s.id === 'staff-med-selena' && (collapsed === 'noor' || collapsed === 'nour' || collapsed === 'selena')) return true;
@@ -1648,7 +1648,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else if (authenticatedUser.id === 'staff-med-dana') {
         finalUser = { ...authenticatedUser, name: 'Dana Al Najjar', customTitle: 'Head of Female Press' };
       } else if (authenticatedUser.id === 'staff-cer-sultana') {
-        finalUser = { ...authenticatedUser, name: 'Sultana Al Fajar' };
+        finalUser = { ...authenticatedUser, name: 'Sultana Al Faraj' };
       }
 
       setCurrentUser(finalUser);

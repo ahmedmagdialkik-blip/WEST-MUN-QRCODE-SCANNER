@@ -176,6 +176,18 @@ const INITIAL_USERS: QrUserAccount[] = [
     status: 'active',
     lastLogin: null,
   },
+  {
+    userId: 'staff-cer-sultana',
+    fullName: 'Sultana Al Faraj',
+    email: 'sultana.ceremonies@westmun.org',
+    role: 'ceremonies',
+    customTitle: 'Head of Ceremonies',
+    assignedGate: 'Ceremonial Main Hall',
+    ticketId: 'MUN-CER-02',
+    qrToken: 'wmun_tok_sultana_alfaraj_839102',
+    status: 'active',
+    lastLogin: null,
+  },
   // Disabled Account example for security validation
   {
     userId: 'usr-david-miller-disabled-uuid',
@@ -217,6 +229,11 @@ class QrAuthService {
               u.email = 'dana.alnajjar@westmun.org';
               updated = true;
             }
+            if (u.userId === 'staff-cer-sultana' || u.fullName.toLowerCase().includes('sultana')) {
+              u.fullName = 'Sultana Al Faraj';
+              u.email = 'sultana.ceremonies@westmun.org';
+              updated = true;
+            }
           });
           if (!parsed.some((u: QrUserAccount) => u.fullName === 'Fahad Alkendi')) {
             parsed.push({
@@ -243,6 +260,21 @@ class QrAuthService {
               assignedGate: 'Press Room',
               ticketId: 'MUN-MED-05',
               qrToken: 'wmun_tok_dana_alnajjar_481920',
+              status: 'active',
+              lastLogin: null,
+            });
+            updated = true;
+          }
+          if (!parsed.some((u: QrUserAccount) => u.fullName === 'Sultana Al Faraj')) {
+            parsed.push({
+              userId: 'staff-cer-sultana',
+              fullName: 'Sultana Al Faraj',
+              email: 'sultana.ceremonies@westmun.org',
+              role: 'ceremonies',
+              customTitle: 'Head of Ceremonies',
+              assignedGate: 'Ceremonial Main Hall',
+              ticketId: 'MUN-CER-02',
+              qrToken: 'wmun_tok_sultana_alfaraj_839102',
               status: 'active',
               lastLogin: null,
             });

@@ -40,7 +40,7 @@ export const isDanaAlnajar = isDanaAlNajjar;
  * 
  * Freshman Welcome Animation Users:
  * - Dana Al Najjar (or Dana)
- * - Sultana Al Fajar (or Sultana)
+ * - Sultana Al Faraj (or Sultana)
  * - Naya (or Naya Barakat)
  * - Jadiya (or Jayda Yasser)
  * - Noor (or Nour)
@@ -59,6 +59,9 @@ export function getAccountEasterEgg(name?: string | null): AccountEasterEggType 
     'dana al-najjar',
     'dana alnajar',
     'dana',
+    'sultana al faraj',
+    'sultana alfaraj',
+    'sultana al-faraj',
     'sultana al fajar',
     'sultana',
     'naya',
