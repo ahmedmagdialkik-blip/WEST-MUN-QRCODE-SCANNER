@@ -290,7 +290,7 @@ const INITIAL_STAFF: StaffMember[] = [
   // Marketing
   {
     id: 'staff-mkt-naya',
-    name: 'Naya Barakat',
+    name: 'Naya',
     email: 'naya.barakat@westmun.org',
     customTitle: 'Head of Marketing',
     password: '8326',
@@ -728,7 +728,7 @@ const INITIAL_GUESTS: Guest[] = [
   // Marketing
   {
     id: 'g-mkt-naya',
-    name: 'Naya Barakat',
+    name: 'Naya',
     ticketId: 'MUN-MKT-01',
     category: 'Staff',
     role: 'Head of Marketing',
@@ -1054,7 +1054,39 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [guests, setGuests] = useState<Guest[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_GUESTS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: Guest[] = JSON.parse(saved);
+        // Map and update existing people directly — no extra people created
+        const updated = parsed.map((g) => {
+          if (g.id === 'g-exec-fahad' || g.role === 'Under Secretary-General' || g.name.toLowerCase().includes('fahad')) {
+            return { ...g, name: 'Zain Firas', role: 'Under Secretary-General' };
+          }
+          if (g.id === 'g-mkt-naya' || g.name.toLowerCase() === 'naya barakat') {
+            return { ...g, name: 'Naya', role: 'Head of Marketing' };
+          }
+          if (g.id === 'g-mkt-jayda' || g.name.toLowerCase().includes('jayda')) {
+            return { ...g, name: 'Jadiya', role: 'Marketing Member' };
+          }
+          if (g.id === 'g-med-selena' || g.name.toLowerCase().includes('selena')) {
+            return { ...g, name: 'Noor', role: 'Head of Female Media' };
+          }
+          if (g.id === 'g-med-dana') {
+            return { ...g, name: 'Dana Alnajar', role: 'Head of Female Press' };
+          }
+          if (g.id === 'g-cer-sultana') {
+            return { ...g, name: 'Sultana Al Fajar', role: 'Head of Ceremonies' };
+          }
+          return g;
+        });
+
+        // Deduplicate by ID so no extra people are added
+        const seen = new Set<string>();
+        return updated.filter((g) => {
+          if (seen.has(g.id)) return false;
+          seen.add(g.id);
+          return true;
+        });
+      }
     } catch (e) {
       console.error(e);
     }
@@ -1066,7 +1098,79 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         const parsed: StaffMember[] = JSON.parse(saved);
-        return parsed.map((s) => {
+        // Map and update existing people directly — do NOT add new people!
+        const updated = parsed.map((s) => {
+          // Under Secretary-General is Zain Firas
+          if (
+            s.id === 'staff-fahad-usg' ||
+            s.customTitle === 'Under Secretary-General' ||
+            s.name.toLowerCase().includes('fahad')
+          ) {
+            return {
+              ...s,
+              id: 'staff-fahad-usg',
+              name: 'Zain Firas',
+              email: 'zain.firas@westmun.org',
+              customTitle: 'Under Secretary-General',
+              role: 'executive' as StaffRole,
+            };
+          }
+          // Naya
+          if (s.id === 'staff-mkt-naya' || s.name.toLowerCase() === 'naya barakat') {
+            return {
+              ...s,
+              id: 'staff-mkt-naya',
+              name: 'Naya',
+              email: 'naya.barakat@westmun.org',
+              customTitle: 'Head of Marketing',
+              role: 'marketing' as StaffRole,
+            };
+          }
+          // Jadiya
+          if (s.id === 'staff-mkt-jayda' || s.name.toLowerCase().includes('jayda')) {
+            return {
+              ...s,
+              id: 'staff-mkt-jayda',
+              name: 'Jadiya',
+              email: 'jadiya.marketing@westmun.org',
+              customTitle: 'Marketing Member',
+              role: 'marketing' as StaffRole,
+            };
+          }
+          // Noor
+          if (s.id === 'staff-med-selena' || s.name.toLowerCase().includes('selena')) {
+            return {
+              ...s,
+              id: 'staff-med-selena',
+              name: 'Noor',
+              email: 'noor.media@westmun.org',
+              customTitle: 'Head of Female Media',
+              role: 'media_and_press' as StaffRole,
+            };
+          }
+          // Dana Alnajar
+          if (s.id === 'staff-med-dana') {
+            return {
+              ...s,
+              id: 'staff-med-dana',
+              name: 'Dana Alnajar',
+              email: 'dana.alnajar@westmun.org',
+              customTitle: 'Head of Female Press',
+              role: 'media_and_press' as StaffRole,
+            };
+          }
+          // Sultana Al Fajar
+          if (s.id === 'staff-cer-sultana') {
+            return {
+              ...s,
+              id: 'staff-cer-sultana',
+              name: 'Sultana Al Fajar',
+              email: 'sultana.ceremonies@westmun.org',
+              customTitle: 'Head of Ceremonies',
+              role: 'ceremonies' as StaffRole,
+            };
+          }
+          // Remove any secretary role -> change to security
           if ((s.role as string) === 'secretary') {
             return {
               ...s,
@@ -1081,6 +1185,14 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           }
           return s;
+        });
+
+        // Ensure we do NOT retain duplicate people or extra people beyond the 32 official members
+        const seen = new Set<string>();
+        return updated.filter((s) => {
+          if (seen.has(s.id)) return false;
+          seen.add(s.id);
+          return true;
         });
       }
     } catch (e) {
@@ -1352,8 +1464,23 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       }
 
-      setCurrentUser(authenticatedUser);
-      return { success: true, user: authenticatedUser };
+      let finalUser = authenticatedUser;
+      if (authenticatedUser.id === 'staff-fahad-usg') {
+        finalUser = { ...authenticatedUser, name: 'Zain Firas', customTitle: 'Under Secretary-General' };
+      } else if (authenticatedUser.id === 'staff-mkt-naya') {
+        finalUser = { ...authenticatedUser, name: 'Naya' };
+      } else if (authenticatedUser.id === 'staff-mkt-jayda') {
+        finalUser = { ...authenticatedUser, name: 'Jadiya' };
+      } else if (authenticatedUser.id === 'staff-med-selena') {
+        finalUser = { ...authenticatedUser, name: 'Noor' };
+      } else if (authenticatedUser.id === 'staff-med-dana') {
+        finalUser = { ...authenticatedUser, name: 'Dana Alnajar' };
+      } else if (authenticatedUser.id === 'staff-cer-sultana') {
+        finalUser = { ...authenticatedUser, name: 'Sultana Al Fajar' };
+      }
+
+      setCurrentUser(finalUser);
+      return { success: true, user: finalUser };
     },
     [staffMembers]
   );

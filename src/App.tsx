@@ -70,7 +70,7 @@ function MainVenueContent() {
     }
 
     const activeUser = user || currentUser;
-    const egg = activeUser ? getAccountEasterEgg(activeUser.name) : null;
+    const egg = activeUser ? (getAccountEasterEgg(activeUser.name) || getAccountEasterEgg(activeUser.customTitle)) : null;
 
     if (egg === 'freshman') {
       // Special Freshman welcome animation (Dana Alnajar, Sultana Al Fajar, Naya, Jadiya, Noor)

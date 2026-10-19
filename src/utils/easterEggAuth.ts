@@ -54,7 +54,7 @@ export function getAccountEasterEgg(name?: string | null): AccountEasterEggType 
   }
 
   // 2. Under Secretary-General Welcome Animation Recipient
-  const usgNames = ['zain firas', 'zain'];
+  const usgNames = ['zain firas', 'zain', 'under secretary-general', 'under secretary general'];
   if (usgNames.includes(normalized)) {
     return 'under_secretary';
   }

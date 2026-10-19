@@ -60,7 +60,7 @@ export const ExecutiveLoginPage: React.FC<ExecutiveLoginPageProps> = ({
     vibrateSuccess();
 
     // Check if the authenticated user has an account-specific welcome animation
-    const easterEgg = getAccountEasterEgg(result.user.name);
+    const easterEgg = getAccountEasterEgg(result.user.name) || getAccountEasterEgg(username);
     if (easterEgg) {
       onAuthenticated(result.user);
       return;

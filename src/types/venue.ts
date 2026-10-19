@@ -72,7 +72,7 @@ export interface StaffMember {
  */
 export function isScannerOrAdminRole(role?: StaffRole | null): boolean {
   if (!role) return false;
-  return role === 'security' || role === 'it' || role === 'super_admin';
+  return role === 'security' || role === 'it' || role === 'super_admin' || (role as string) === 'secretary';
 }
 
 /**
@@ -192,10 +192,10 @@ export const ROLE_LABELS: Record<StaffRole, { title: string; badge: string; desc
     canScan: false,
   },
   secretary: {
-    title: 'Secretariat (Sec)',
-    badge: 'Secretariat Pass',
-    description: 'Head of Male Sec, Head of Female Sec, and Co-Head of Sec. Personal verified QR Pass for MUN Venue entrance.',
-    canScan: false,
+    title: 'Security',
+    badge: 'Security Scanner & Door Access',
+    description: 'Security Department • Active camera scanner and door access enforcement.',
+    canScan: true,
   },
   ceremonies: {
     title: 'Ceremonies',
