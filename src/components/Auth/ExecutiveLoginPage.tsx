@@ -5,7 +5,7 @@ import { StaffMember } from '../../types/venue';
 import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
 import { vibrateSuccess, vibrateWarning } from '../../utils/haptics';
 import officialLogoUrl from '../../assets/images/west_mun_logo_official.jpg';
-import { getAccountEasterEgg } from '../../utils/easterEggAuth';
+import { getAccountEasterEgg, isDanaAlNajjar } from '../../utils/easterEggAuth';
 
 interface ExecutiveLoginPageProps {
   onAuthenticated: (user: StaffMember) => void;
@@ -60,7 +60,7 @@ export const ExecutiveLoginPage: React.FC<ExecutiveLoginPageProps> = ({
     vibrateSuccess();
 
     // Check if the authenticated user has an account-specific welcome animation
-    const easterEgg = getAccountEasterEgg(result.user.name) || getAccountEasterEgg(username);
+    const easterEgg = isDanaAlNajjar(result.user.name) || getAccountEasterEgg(result.user.name) || getAccountEasterEgg(username);
     if (easterEgg) {
       onAuthenticated(result.user);
       return;

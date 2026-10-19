@@ -20,10 +20,18 @@ import { ExecutiveLoginPage } from './components/Auth/ExecutiveLoginPage';
 import { WelcomeGreetingOverlay } from './components/Auth/WelcomeGreetingOverlay';
 import { FreshmanWelcomeEasterEgg } from './components/EasterEgg/DanaFreshmanEasterEgg';
 import { UnderSecretaryWelcomeEasterEgg } from './components/EasterEgg/UnderSecretaryWelcomeEasterEgg';
-import { getAccountEasterEgg } from './utils/easterEggAuth';
+import { DanaNameChangeEasterEgg } from './components/EasterEgg/DanaNameChangeEasterEgg';
+import { getAccountEasterEgg, isDanaAlNajjar } from './utils/easterEggAuth';
 import { isScannerOrAdminRole, ROLE_LABELS, StaffMember } from './types/venue';
 
-type AppFlowStage = 'intro' | 'login' | 'freshman_easter_egg' | 'usg_easter_egg' | 'welcome' | 'homepage';
+type AppFlowStage =
+  | 'intro'
+  | 'login'
+  | 'dana_name_change_easter_egg'
+  | 'freshman_easter_egg'
+  | 'usg_easter_egg'
+  | 'welcome'
+  | 'homepage';
 
 function MainVenueContent() {
   const {
@@ -49,6 +57,7 @@ function MainVenueContent() {
       !isAuthenticated &&
       (flowStage === 'homepage' ||
         flowStage === 'welcome' ||
+        flowStage === 'dana_name_change_easter_egg' ||
         flowStage === 'freshman_easter_egg' ||
         flowStage === 'usg_easter_egg')
     ) {
@@ -70,10 +79,18 @@ function MainVenueContent() {
     }
 
     const activeUser = user || currentUser;
+    const rawName = activeUser?.name || '';
+
+    // Exclusive Dana Al Najjar Easter Egg: Plays BEFORE the regular freshman welcome animation
+    if (isDanaAlNajjar(rawName)) {
+      setFlowStage('dana_name_change_easter_egg');
+      return;
+    }
+
     const egg = activeUser ? (getAccountEasterEgg(activeUser.name) || getAccountEasterEgg(activeUser.customTitle)) : null;
 
     if (egg === 'freshman') {
-      // Special Freshman welcome animation (Dana Alnajar, Sultana Al Fajar, Naya, Jadiya, Noor)
+      // Special Freshman welcome animation (Sultana Al Fajar, Naya, Jadiya, Noor)
       setFlowStage('freshman_easter_egg');
     } else if (egg === 'under_secretary') {
       // Special Under Secretary-General fanfare animation (Zain Firas)
@@ -104,13 +121,26 @@ function MainVenueContent() {
     flowStage === 'login' ||
     (!isAuthenticated &&
       flowStage !== 'welcome' &&
+      flowStage !== 'dana_name_change_easter_egg' &&
       flowStage !== 'freshman_easter_egg' &&
       flowStage !== 'usg_easter_egg')
   ) {
     return <ExecutiveLoginPage onAuthenticated={handleAuthenticationSuccess} />;
   }
 
-  // Special Easter Egg: Freshman Welcome (Dana Alnajar, Sultana Al Fajar, Naya, Jadiya, Noor)
+  // Exclusive Easter Egg 1: Dana Al Najjar Name Change Reveal Animation (Plays BEFORE regular freshman welcome)
+  if (flowStage === 'dana_name_change_easter_egg') {
+    return (
+      <DanaNameChangeEasterEgg
+        onComplete={() => {
+          // Automatically transition into Dana Al Najjar's existing freshman welcome animation (nursery rhyme + baby theme)
+          setFlowStage('freshman_easter_egg');
+        }}
+      />
+    );
+  }
+
+  // Special Easter Egg: Freshman Welcome (Dana Al Najjar, Sultana Al Fajar, Naya, Jadiya, Noor)
   if (flowStage === 'freshman_easter_egg') {
     return (
       <FreshmanWelcomeEasterEgg

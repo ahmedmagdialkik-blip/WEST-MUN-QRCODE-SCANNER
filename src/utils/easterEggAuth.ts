@@ -19,10 +19,27 @@ export function normalizeUserName(name?: string | null): string {
 }
 
 /**
+ * Check if the user is strictly Dana Al Najjar (case-insensitive, ignoring extra spaces).
+ * Used exclusively for the special "See, Freshman... I changed your name!" easter egg.
+ */
+export function isDanaAlNajjar(name?: string | null): boolean {
+  const normalized = normalizeUserName(name);
+  return (
+    normalized === 'dana al najjar' ||
+    normalized === 'dana alnajjar' ||
+    normalized === 'dana al-najjar' ||
+    normalized === 'dana alnajar'
+  );
+}
+
+// Backward compatibility alias
+export const isDanaAlnajar = isDanaAlNajjar;
+
+/**
  * Determines which account-specific welcome animation to trigger.
  * 
  * Freshman Welcome Animation Users:
- * - Dana Alnajar
+ * - Dana Al Najjar (or Dana)
  * - Sultana Al Fajar (or Sultana)
  * - Naya (or Naya Barakat)
  * - Jadiya (or Jayda Yasser)
@@ -37,7 +54,11 @@ export function getAccountEasterEgg(name?: string | null): AccountEasterEggType 
 
   // 1. Freshman Welcome Animation Recipients
   const freshmanNames = [
+    'dana al najjar',
+    'dana alnajjar',
+    'dana al-najjar',
     'dana alnajar',
+    'dana',
     'sultana al fajar',
     'sultana',
     'naya',
@@ -60,13 +81,6 @@ export function getAccountEasterEgg(name?: string | null): AccountEasterEggType 
   }
 
   return null;
-}
-
-/**
- * Backward compatibility helper for Dana Alnajar specifically
- */
-export function isDanaAlnajar(name?: string | null): boolean {
-  return normalizeUserName(name) === 'dana alnajar';
 }
 
 /**

@@ -201,3 +201,143 @@ export function playFreshmanNurseryRhyme(): () => void {
     }
   };
 }
+
+/**
+ * Play a funny, cheerful, comedic "Ta-Daaa!" fanfare sound effect (~2.5s).
+ * Synthesizes a playful cartoon brass fanfare with triumphant vibrato and celebratory sparkle.
+ * Used exclusively for the Dana Al Najjar "See, Freshman... I changed your name!" easter egg.
+ */
+export function playFunnyTaDaSound(): () => void {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return () => {};
+  }
+
+  let ctx: AudioContext | null = null;
+  try {
+    ctx = new AudioContextClass();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+  } catch {
+    return () => {};
+  }
+
+  const activeOscillators: OscillatorNode[] = [];
+  let isStopped = false;
+
+  const now = ctx.currentTime + 0.05;
+
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(0.32, now);
+  masterGain.connect(ctx.destination);
+
+  // Helper for brass note
+  const playBrassNote = (freq: number, start: number, duration: number, isFinalChord = false) => {
+    if (isStopped || !ctx) return;
+    const t = now + start;
+
+    // Sawtooth + square mix for cartoon comedic brass trumpet
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(freq, t);
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(freq * 1.002, t);
+
+    // If final chord, add playful vibrato
+    if (isFinalChord) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.setValueAtTime(6, t); // 6 Hz vibrato
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(7, t);
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+      lfoGain.connect(osc2.frequency);
+      lfo.start(t + 0.2);
+      lfo.stop(t + duration);
+      activeOscillators.push(lfo);
+    }
+
+    const noteGain = ctx.createGain();
+    noteGain.gain.setValueAtTime(0.001, t);
+    noteGain.gain.linearRampToValueAtTime(0.28, t + 0.03);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    osc1.connect(noteGain);
+    osc2.connect(noteGain);
+    noteGain.connect(masterGain);
+
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + duration);
+    osc2.stop(t + duration);
+
+    activeOscillators.push(osc1, osc2);
+  };
+
+  // Helper for sparkling twinkle arpeggio
+  const playTwinkle = (freq: number, start: number) => {
+    if (isStopped || !ctx) return;
+    const t = now + start;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.35);
+    activeOscillators.push(osc);
+  };
+
+  // Playful comedic fanfare sequence:
+  // "Dum... da-da... TA-DAAA!"
+  playBrassNote(392.0, 0.0, 0.14);   // G4
+  playBrassNote(493.88, 0.16, 0.14); // B4
+  playBrassNote(587.33, 0.32, 0.16); // D5
+
+  // Big joyful "TA-DAAA!" chord held for ~2 seconds
+  playBrassNote(783.99, 0.52, 2.0, true);  // G5
+  playBrassNote(987.77, 0.52, 2.0, true);  // B5
+  playBrassNote(1174.66, 0.52, 2.0, true); // D6
+
+  // Cheerful glitter sparkles cascading down
+  playTwinkle(1567.98, 0.6); // G6
+  playTwinkle(1760.0, 0.75); // A6
+  playTwinkle(1975.53, 0.9); // B6
+  playTwinkle(2349.32, 1.05); // D7
+  playTwinkle(2637.02, 1.25); // E7
+
+  return () => {
+    isStopped = true;
+    try {
+      activeOscillators.forEach((osc) => {
+        try {
+          osc.stop();
+          osc.disconnect();
+        } catch {
+          // ignore
+        }
+      });
+      masterGain.disconnect();
+      if (ctx && ctx.state !== 'closed') {
+        ctx.close().catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  };
+}
+

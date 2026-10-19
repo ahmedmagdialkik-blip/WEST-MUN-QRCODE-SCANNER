@@ -152,6 +152,30 @@ const INITIAL_USERS: QrUserAccount[] = [
     status: 'active',
     lastLogin: null,
   },
+  {
+    userId: 'staff-med-fahad',
+    fullName: 'Fahad Alkendi',
+    email: 'fahad.alkendi@westmun.org',
+    role: 'media_and_press',
+    customTitle: 'Head of Media & Press',
+    assignedGate: 'Media Gallery',
+    ticketId: 'MUN-MED-02',
+    qrToken: 'wmun_tok_fahad_alkendi_928172',
+    status: 'active',
+    lastLogin: null,
+  },
+  {
+    userId: 'staff-med-dana',
+    fullName: 'Dana Al Najjar',
+    email: 'dana.alnajjar@westmun.org',
+    role: 'media_and_press',
+    customTitle: 'Head of Female Press',
+    assignedGate: 'Press Room',
+    ticketId: 'MUN-MED-05',
+    qrToken: 'wmun_tok_dana_alnajjar_481920',
+    status: 'active',
+    lastLogin: null,
+  },
   // Disabled Account example for security validation
   {
     userId: 'usr-david-miller-disabled-uuid',
@@ -180,7 +204,54 @@ class QrAuthService {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize Fahad and Dana in existing parsed list
+          let updated = false;
+          parsed.forEach((u: QrUserAccount) => {
+            if (u.userId === 'staff-med-fahad' || u.fullName.toLowerCase().includes('fahad')) {
+              u.fullName = 'Fahad Alkendi';
+              u.email = 'fahad.alkendi@westmun.org';
+              updated = true;
+            }
+            if (u.userId === 'staff-med-dana' || u.fullName.toLowerCase().includes('dana')) {
+              u.fullName = 'Dana Al Najjar';
+              u.email = 'dana.alnajjar@westmun.org';
+              updated = true;
+            }
+          });
+          if (!parsed.some((u: QrUserAccount) => u.fullName === 'Fahad Alkendi')) {
+            parsed.push({
+              userId: 'staff-med-fahad',
+              fullName: 'Fahad Alkendi',
+              email: 'fahad.alkendi@westmun.org',
+              role: 'media_and_press',
+              customTitle: 'Head of Media & Press',
+              assignedGate: 'Media Gallery',
+              ticketId: 'MUN-MED-02',
+              qrToken: 'wmun_tok_fahad_alkendi_928172',
+              status: 'active',
+              lastLogin: null,
+            });
+            updated = true;
+          }
+          if (!parsed.some((u: QrUserAccount) => u.fullName === 'Dana Al Najjar')) {
+            parsed.push({
+              userId: 'staff-med-dana',
+              fullName: 'Dana Al Najjar',
+              email: 'dana.alnajjar@westmun.org',
+              role: 'media_and_press',
+              customTitle: 'Head of Female Press',
+              assignedGate: 'Press Room',
+              ticketId: 'MUN-MED-05',
+              qrToken: 'wmun_tok_dana_alnajjar_481920',
+              status: 'active',
+              lastLogin: null,
+            });
+            updated = true;
+          }
           this.users = parsed;
+          if (updated) {
+            this.saveUsers();
+          }
           return;
         }
       }

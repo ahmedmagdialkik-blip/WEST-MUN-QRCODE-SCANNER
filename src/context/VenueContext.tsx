@@ -438,7 +438,7 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-med-fahad',
-    name: 'Fahad Al Kednd',
+    name: 'Fahad Alkendi',
     email: 'fahad.alkendi@westmun.org',
     customTitle: 'Head of Media & Press',
     password: '7035',
@@ -492,8 +492,8 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-med-dana',
-    name: 'Dana Alnajar',
-    email: 'dana.alnajar@westmun.org',
+    name: 'Dana Al Najjar',
+    email: 'dana.alnajjar@westmun.org',
     customTitle: 'Head of Female Press',
     password: '1368',
     role: 'media_and_press',
@@ -838,7 +838,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-med-fahad',
-    name: 'Fahad Al Kednd',
+    name: 'Fahad Alkendi',
     ticketId: 'MUN-MED-02',
     category: 'Press',
     role: 'Head of Media & Press',
@@ -871,7 +871,7 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-med-dana',
-    name: 'Dana Alnajar',
+    name: 'Dana Al Najjar',
     ticketId: 'MUN-MED-05',
     category: 'Press',
     role: 'Head of Female Press',
@@ -1090,9 +1090,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if ((g.id === 'g-exec-fahad' || g.role === 'Under Secretary-General') && g.id !== 'g-med-fahad') {
             return { ...g, name: 'Zain Firas', role: 'Under Secretary-General' };
           }
-          // Fahad Al Kednd - Head of Media & Press
+          // Fahad Alkendi - Head of Media & Press
           if (g.id === 'g-med-fahad' || (g.name.toLowerCase().includes('fahad') && g.id !== 'g-exec-fahad')) {
-            return { ...g, id: 'g-med-fahad', name: 'Fahad Al Kednd', role: 'Head of Media & Press', category: 'Press' as const };
+            return { ...g, id: 'g-med-fahad', name: 'Fahad Alkendi', role: 'Head of Media & Press', category: 'Press' as const };
           }
           // Lily Rabia - Co-Head of DCC
           if (g.id === 'g-dcc-lily' || g.name.toLowerCase().includes('lily')) {
@@ -1107,8 +1107,8 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (g.id === 'g-med-selena' || g.name.toLowerCase().includes('selena')) {
             return { ...g, name: 'Noor', role: 'Head of Female Media' };
           }
-          if (g.id === 'g-med-dana') {
-            return { ...g, name: 'Dana Alnajar', role: 'Head of Female Press' };
+          if (g.id === 'g-med-dana' || g.name.toLowerCase().includes('dana')) {
+            return { ...g, id: 'g-med-dana', name: 'Dana Al Najjar', role: 'Head of Female Press' };
           }
           if (g.id === 'g-cer-sultana') {
             return { ...g, name: 'Sultana Al Fajar', role: 'Head of Ceremonies' };
@@ -1128,7 +1128,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!seen.has('g-med-fahad')) {
           list.push({
             id: 'g-med-fahad',
-            name: 'Fahad Al Kednd',
+            name: 'Fahad Alkendi',
             ticketId: 'MUN-MED-02',
             category: 'Press',
             role: 'Head of Media & Press',
@@ -1177,12 +1177,12 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               role: 'executive' as StaffRole,
             };
           }
-          // Fahad Al Kednd (Head of Media & Press)
+          // Fahad Alkendi (Head of Media & Press)
           if (s.id === 'staff-med-fahad' || (s.name.toLowerCase().includes('fahad') && s.id !== 'staff-fahad-usg')) {
             return {
               ...s,
               id: 'staff-med-fahad',
-              name: 'Fahad Al Kednd',
+              name: 'Fahad Alkendi',
               email: 'fahad.alkendi@westmun.org',
               customTitle: 'Head of Media & Press',
               role: 'media_and_press' as StaffRole,
@@ -1240,15 +1240,19 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               role: 'media_and_press' as StaffRole,
             };
           }
-          // Dana Alnajar
-          if (s.id === 'staff-med-dana') {
+          // Dana Al Najjar
+          if (s.id === 'staff-med-dana' || s.name.toLowerCase().includes('dana')) {
             return {
               ...s,
               id: 'staff-med-dana',
-              name: 'Dana Alnajar',
-              email: 'dana.alnajar@westmun.org',
+              name: 'Dana Al Najjar',
+              email: 'dana.alnajjar@westmun.org',
               customTitle: 'Head of Female Press',
               role: 'media_and_press' as StaffRole,
+              password: s.password || '1368',
+              accessKey: s.accessKey || '1368',
+              assignedGate: 'Press Room',
+              ticketId: 'MUN-MED-05',
             };
           }
           // Sultana Al Fajar
@@ -1289,11 +1293,11 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return true;
         });
 
-        // Ensure Fahad Al Kednd is guaranteed present
+        // Ensure Fahad Alkendi is guaranteed present
         if (!seen.has('staff-med-fahad')) {
           list.push({
             id: 'staff-med-fahad',
-            name: 'Fahad Al Kednd',
+            name: 'Fahad Alkendi',
             email: 'fahad.alkendi@westmun.org',
             customTitle: 'Head of Media & Press',
             password: '7035',
@@ -1301,6 +1305,28 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             accessKey: '7035',
             assignedGate: 'Media Gallery',
             ticketId: 'MUN-MED-02',
+            canScan: false,
+            canManualCheckIn: false,
+            canRevokeCheckIn: false,
+            canManageStaff: false,
+            canExportData: true,
+            isActive: true,
+            lastActiveTime: new Date().toISOString(),
+          });
+        }
+
+        // Ensure Dana Al Najjar is guaranteed present
+        if (!seen.has('staff-med-dana')) {
+          list.push({
+            id: 'staff-med-dana',
+            name: 'Dana Al Najjar',
+            email: 'dana.alnajjar@westmun.org',
+            customTitle: 'Head of Female Press',
+            password: '1368',
+            role: 'media_and_press',
+            accessKey: '1368',
+            assignedGate: 'Press Room',
+            ticketId: 'MUN-MED-05',
             canScan: false,
             canManualCheckIn: false,
             canRevokeCheckIn: false,
@@ -1560,13 +1586,13 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         // Account Aliases for USG, Media, DCC and Freshmen
         if (s.id === 'staff-fahad-usg' && (collapsed === 'zain firas' || collapsed === 'zain' || collapsed === 'usg')) return true;
-        if (s.id === 'staff-med-fahad' && (collapsed === 'fahad al kednd' || collapsed === 'fahad al kedndi' || collapsed === 'fahad al kendi' || collapsed === 'fahad' || collapsed.includes('kednd') || collapsed === 'head of media and press' || collapsed === 'head of media and pressi')) return true;
+        if (s.id === 'staff-med-fahad' && (collapsed === 'fahad alkendi' || collapsed === 'fahad al kendi' || collapsed === 'fahad' || collapsed === 'fahad.alkendi' || collapsed === 'fahad al kednd' || collapsed === 'head of media and press' || collapsed === 'head of media and pressi')) return true;
         if (s.id === 'staff-dcc-lily' && (collapsed === 'lily rabia' || collapsed === 'lily' || collapsed.includes('lily rabia') || collapsed === 'co head dcc' || collapsed === 'lily rabia-co head dcc')) return true;
         if (s.id === 'staff-cer-sultana' && (collapsed === 'sultana al fajar' || collapsed === 'sultana')) return true;
         if (s.id === 'staff-mkt-naya' && (collapsed === 'naya' || collapsed === 'naya barakat')) return true;
         if (s.id === 'staff-mkt-jayda' && (collapsed === 'jadiya' || collapsed === 'jayda' || collapsed === 'jayda yasser')) return true;
         if (s.id === 'staff-med-selena' && (collapsed === 'noor' || collapsed === 'nour' || collapsed === 'selena')) return true;
-        if (s.id === 'staff-med-dana' && (collapsed === 'dana alnajar' || collapsed === 'dana')) return true;
+        if (s.id === 'staff-med-dana' && (collapsed === 'dana al najjar' || collapsed === 'dana alnajjar' || collapsed === 'dana' || collapsed === 'dana al-najjar' || collapsed === 'dana alnajar' || collapsed === 'dana.alnajjar')) return true;
 
         return false;
       });
@@ -1610,7 +1636,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (authenticatedUser.id === 'staff-fahad-usg') {
         finalUser = { ...authenticatedUser, name: 'Zain Firas', customTitle: 'Under Secretary-General' };
       } else if (authenticatedUser.id === 'staff-med-fahad') {
-        finalUser = { ...authenticatedUser, name: 'Fahad Al Kednd', customTitle: 'Head of Media & Press' };
+        finalUser = { ...authenticatedUser, name: 'Fahad Alkendi', customTitle: 'Head of Media & Press' };
       } else if (authenticatedUser.id === 'staff-dcc-lily') {
         finalUser = { ...authenticatedUser, name: 'Lily Rabia', customTitle: 'Co-Head of DCC' };
       } else if (authenticatedUser.id === 'staff-mkt-naya') {
@@ -1620,7 +1646,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else if (authenticatedUser.id === 'staff-med-selena') {
         finalUser = { ...authenticatedUser, name: 'Noor' };
       } else if (authenticatedUser.id === 'staff-med-dana') {
-        finalUser = { ...authenticatedUser, name: 'Dana Alnajar' };
+        finalUser = { ...authenticatedUser, name: 'Dana Al Najjar', customTitle: 'Head of Female Press' };
       } else if (authenticatedUser.id === 'staff-cer-sultana') {
         finalUser = { ...authenticatedUser, name: 'Sultana Al Fajar' };
       }

@@ -196,6 +196,38 @@ function createInitialUsers(): UserAccount[] {
       lockedUntil: null,
     },
     {
+      id: 'staff-med-fahad',
+      username: 'fahad.alkendi',
+      displayName: 'Fahad Alkendi',
+      passwordHash: bcrypt.hashSync('7035', 10),
+      email: 'fahad.alkendi@westmun.org',
+      role: 'media_and_press',
+      customTitle: 'Head of Media & Press',
+      assignedGate: 'Media Gallery',
+      ticketId: 'MUN-MED-02',
+      profilePicture: officialLogoImage,
+      lastLogin: null,
+      accountStatus: 'active',
+      failedAttempts: 0,
+      lockedUntil: null,
+    },
+    {
+      id: 'staff-med-dana',
+      username: 'dana.alnajjar',
+      displayName: 'Dana Al Najjar',
+      passwordHash: bcrypt.hashSync('1368', 10),
+      email: 'dana.alnajjar@westmun.org',
+      role: 'media_and_press',
+      customTitle: 'Head of Female Press',
+      assignedGate: 'Press Room',
+      ticketId: 'MUN-MED-05',
+      profilePicture: officialLogoImage,
+      lastLogin: null,
+      accountStatus: 'active',
+      failedAttempts: 0,
+      lockedUntil: null,
+    },
+    {
       id: 'usr-david-miller-disabled-uuid',
       username: 'david.miller',
       displayName: 'David Miller',
@@ -226,7 +258,69 @@ class UserAuthService {
     try {
       const storedUsers = localStorage.getItem(STORAGE_KEY_USERS);
       if (storedUsers) {
-        this.users = JSON.parse(storedUsers);
+        const parsed: UserAccount[] = JSON.parse(storedUsers);
+        // Ensure Fahad Alkendi and Dana Al Najjar are normalized in existing storage
+        let updated = false;
+        parsed.forEach((u) => {
+          if (u.id === 'staff-med-fahad' || u.username.includes('fahad') || u.displayName.toLowerCase().includes('fahad')) {
+            u.displayName = 'Fahad Alkendi';
+            u.username = 'fahad.alkendi';
+            u.email = 'fahad.alkendi@westmun.org';
+            updated = true;
+          }
+          if (u.id === 'staff-med-dana' || u.username.includes('dana') || u.displayName.toLowerCase().includes('dana')) {
+            u.displayName = 'Dana Al Najjar';
+            u.username = 'dana.alnajjar';
+            u.email = 'dana.alnajjar@westmun.org';
+            updated = true;
+          }
+        });
+
+        // Ensure both accounts exist
+        if (!parsed.some((u) => u.displayName === 'Fahad Alkendi')) {
+          parsed.push({
+            id: 'staff-med-fahad',
+            username: 'fahad.alkendi',
+            displayName: 'Fahad Alkendi',
+            passwordHash: bcrypt.hashSync('7035', 10),
+            email: 'fahad.alkendi@westmun.org',
+            role: 'media_and_press',
+            customTitle: 'Head of Media & Press',
+            assignedGate: 'Media Gallery',
+            ticketId: 'MUN-MED-02',
+            profilePicture: officialLogoImage,
+            lastLogin: null,
+            accountStatus: 'active',
+            failedAttempts: 0,
+            lockedUntil: null,
+          });
+          updated = true;
+        }
+
+        if (!parsed.some((u) => u.displayName === 'Dana Al Najjar')) {
+          parsed.push({
+            id: 'staff-med-dana',
+            username: 'dana.alnajjar',
+            displayName: 'Dana Al Najjar',
+            passwordHash: bcrypt.hashSync('1368', 10),
+            email: 'dana.alnajjar@westmun.org',
+            role: 'media_and_press',
+            customTitle: 'Head of Female Press',
+            assignedGate: 'Press Room',
+            ticketId: 'MUN-MED-05',
+            profilePicture: officialLogoImage,
+            lastLogin: null,
+            accountStatus: 'active',
+            failedAttempts: 0,
+            lockedUntil: null,
+          });
+          updated = true;
+        }
+
+        this.users = parsed;
+        if (updated) {
+          this.saveUsers();
+        }
       } else {
         this.users = createInitialUsers();
         this.saveUsers();

@@ -184,7 +184,7 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Fahad Al Kednd"
+                  placeholder="e.g. Fahad Alkendi"
                   className="w-full bg-[#0A0908] border border-[#B08D57]/40 rounded-xs px-3 py-2 text-sm text-[#F5F2EA] placeholder-[#6E5D4A] focus:outline-none focus:border-[#E5C578] font-serif"
                 />
               </div>
