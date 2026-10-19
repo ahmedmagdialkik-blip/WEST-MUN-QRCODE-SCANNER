@@ -438,9 +438,9 @@ const INITIAL_STAFF: StaffMember[] = [
   },
   {
     id: 'staff-med-fahad',
-    name: 'Fahad Al Kendi',
+    name: 'Fahad Al Kednd',
     email: 'fahad.alkendi@westmun.org',
-    customTitle: 'Head of Male Media',
+    customTitle: 'Head of Media & Press',
     password: '7035',
     role: 'media_and_press',
     accessKey: '7035',
@@ -674,6 +674,24 @@ const INITIAL_STAFF: StaffMember[] = [
     isActive: true,
     lastActiveTime: new Date().toISOString(),
   },
+  {
+    id: 'staff-dcc-lily',
+    name: 'Lily Rabia',
+    email: 'lily.rabia@westmun.org',
+    customTitle: 'Co-Head of DCC',
+    password: '3791',
+    role: 'dcc',
+    accessKey: '3791',
+    assignedGate: 'DCC Control Room',
+    ticketId: 'MUN-DCC-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
 ];
 
 // All official credential passes for WESTMUN.
@@ -820,10 +838,10 @@ const INITIAL_GUESTS: Guest[] = [
   },
   {
     id: 'g-med-fahad',
-    name: 'Fahad Al Kendi',
+    name: 'Fahad Al Kednd',
     ticketId: 'MUN-MED-02',
     category: 'Press',
-    role: 'Head of Male Media',
+    role: 'Head of Media & Press',
     tableOrSeat: 'Media Gallery',
     notes: 'Media & Press Department',
     status: 'Pending',
@@ -1046,6 +1064,17 @@ const INITIAL_GUESTS: Guest[] = [
     status: 'Pending',
     scanCount: 0,
   },
+  {
+    id: 'g-dcc-lily',
+    name: 'Lily Rabia',
+    ticketId: 'MUN-DCC-02',
+    category: 'Staff',
+    role: 'Co-Head of DCC',
+    tableOrSeat: 'DCC Control Room',
+    notes: 'Digital Committee Control (DCC) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
 ];
 
 const VenueContext = createContext<VenueContextType | null>(null);
@@ -1056,10 +1085,18 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(STORAGE_KEY_GUESTS);
       if (saved) {
         const parsed: Guest[] = JSON.parse(saved);
-        // Map and update existing people directly — no extra people created
         const updated = parsed.map((g) => {
-          if (g.id === 'g-exec-fahad' || g.role === 'Under Secretary-General' || g.name.toLowerCase().includes('fahad')) {
+          // Under Secretary-General is Zain Firas
+          if ((g.id === 'g-exec-fahad' || g.role === 'Under Secretary-General') && g.id !== 'g-med-fahad') {
             return { ...g, name: 'Zain Firas', role: 'Under Secretary-General' };
+          }
+          // Fahad Al Kednd - Head of Media & Press
+          if (g.id === 'g-med-fahad' || (g.name.toLowerCase().includes('fahad') && g.id !== 'g-exec-fahad')) {
+            return { ...g, id: 'g-med-fahad', name: 'Fahad Al Kednd', role: 'Head of Media & Press', category: 'Press' as const };
+          }
+          // Lily Rabia - Co-Head of DCC
+          if (g.id === 'g-dcc-lily' || g.name.toLowerCase().includes('lily')) {
+            return { ...g, id: 'g-dcc-lily', name: 'Lily Rabia', role: 'Co-Head of DCC', category: 'Staff' as const };
           }
           if (g.id === 'g-mkt-naya' || g.name.toLowerCase() === 'naya barakat') {
             return { ...g, name: 'Naya', role: 'Head of Marketing' };
@@ -1079,13 +1116,43 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return g;
         });
 
-        // Deduplicate by ID so no extra people are added
+        // Deduplicate by ID
         const seen = new Set<string>();
-        return updated.filter((g) => {
+        const list = updated.filter((g) => {
           if (seen.has(g.id)) return false;
           seen.add(g.id);
           return true;
         });
+
+        // Ensure Fahad and Lily are present
+        if (!seen.has('g-med-fahad')) {
+          list.push({
+            id: 'g-med-fahad',
+            name: 'Fahad Al Kednd',
+            ticketId: 'MUN-MED-02',
+            category: 'Press',
+            role: 'Head of Media & Press',
+            tableOrSeat: 'Media Gallery',
+            notes: 'Media & Press Department',
+            status: 'Pending',
+            scanCount: 0,
+          });
+        }
+        if (!seen.has('g-dcc-lily')) {
+          list.push({
+            id: 'g-dcc-lily',
+            name: 'Lily Rabia',
+            ticketId: 'MUN-DCC-02',
+            category: 'Staff',
+            role: 'Co-Head of DCC',
+            tableOrSeat: 'DCC Control Room',
+            notes: 'Digital Committee Control (DCC) Department',
+            status: 'Pending',
+            scanCount: 0,
+          });
+        }
+
+        return list;
       }
     } catch (e) {
       console.error(e);
@@ -1098,14 +1165,9 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         const parsed: StaffMember[] = JSON.parse(saved);
-        // Map and update existing people directly — do NOT add new people!
         const updated = parsed.map((s) => {
           // Under Secretary-General is Zain Firas
-          if (
-            s.id === 'staff-fahad-usg' ||
-            s.customTitle === 'Under Secretary-General' ||
-            s.name.toLowerCase().includes('fahad')
-          ) {
+          if (s.id === 'staff-fahad-usg' || (s.customTitle === 'Under Secretary-General' && s.id !== 'staff-med-fahad')) {
             return {
               ...s,
               id: 'staff-fahad-usg',
@@ -1113,6 +1175,36 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               email: 'zain.firas@westmun.org',
               customTitle: 'Under Secretary-General',
               role: 'executive' as StaffRole,
+            };
+          }
+          // Fahad Al Kednd (Head of Media & Press)
+          if (s.id === 'staff-med-fahad' || (s.name.toLowerCase().includes('fahad') && s.id !== 'staff-fahad-usg')) {
+            return {
+              ...s,
+              id: 'staff-med-fahad',
+              name: 'Fahad Al Kednd',
+              email: 'fahad.alkendi@westmun.org',
+              customTitle: 'Head of Media & Press',
+              role: 'media_and_press' as StaffRole,
+              password: s.password || '7035',
+              accessKey: s.accessKey || '7035',
+              assignedGate: 'Media Gallery',
+              ticketId: 'MUN-MED-02',
+            };
+          }
+          // Lily Rabia (Co-Head of DCC)
+          if (s.id === 'staff-dcc-lily' || (s.name.toLowerCase().includes('lily') && s.id.includes('dcc'))) {
+            return {
+              ...s,
+              id: 'staff-dcc-lily',
+              name: 'Lily Rabia',
+              email: 'lily.rabia@westmun.org',
+              customTitle: 'Co-Head of DCC',
+              role: 'dcc' as StaffRole,
+              password: s.password || '3791',
+              accessKey: s.accessKey || '3791',
+              assignedGate: 'DCC Control Room',
+              ticketId: 'MUN-DCC-02',
             };
           }
           // Naya
@@ -1170,7 +1262,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               role: 'ceremonies' as StaffRole,
             };
           }
-          // Remove any secretary role -> change to security
+          // Convert legacy secretary role to security
           if ((s.role as string) === 'secretary') {
             return {
               ...s,
@@ -1184,16 +1276,64 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               customTitle: s.customTitle ? s.customTitle.replace(/Sec\b|Secretariat/g, 'Security') : 'Security Officer',
             };
           }
+
+          // Retain all other existing or added staff members with their EXACT assigned role and title
           return s;
         });
 
-        // Ensure we do NOT retain duplicate people or extra people beyond the 32 official members
+        // Deduplicate by ID
         const seen = new Set<string>();
-        return updated.filter((s) => {
+        const list = updated.filter((s) => {
           if (seen.has(s.id)) return false;
           seen.add(s.id);
           return true;
         });
+
+        // Ensure Fahad Al Kednd is guaranteed present
+        if (!seen.has('staff-med-fahad')) {
+          list.push({
+            id: 'staff-med-fahad',
+            name: 'Fahad Al Kednd',
+            email: 'fahad.alkendi@westmun.org',
+            customTitle: 'Head of Media & Press',
+            password: '7035',
+            role: 'media_and_press',
+            accessKey: '7035',
+            assignedGate: 'Media Gallery',
+            ticketId: 'MUN-MED-02',
+            canScan: false,
+            canManualCheckIn: false,
+            canRevokeCheckIn: false,
+            canManageStaff: false,
+            canExportData: true,
+            isActive: true,
+            lastActiveTime: new Date().toISOString(),
+          });
+        }
+
+        // Ensure Lily Rabia is guaranteed present
+        if (!seen.has('staff-dcc-lily')) {
+          list.push({
+            id: 'staff-dcc-lily',
+            name: 'Lily Rabia',
+            email: 'lily.rabia@westmun.org',
+            customTitle: 'Co-Head of DCC',
+            password: '3791',
+            role: 'dcc',
+            accessKey: '3791',
+            assignedGate: 'DCC Control Room',
+            ticketId: 'MUN-DCC-02',
+            canScan: false,
+            canManualCheckIn: false,
+            canRevokeCheckIn: false,
+            canManageStaff: false,
+            canExportData: true,
+            isActive: true,
+            lastActiveTime: new Date().toISOString(),
+          });
+        }
+
+        return list;
       }
     } catch (e) {
       console.error(e);
@@ -1418,8 +1558,10 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return true;
         }
 
-        // Account Aliases for USG and Freshmen
-        if (s.id === 'staff-fahad-usg' && (collapsed === 'zain firas' || collapsed === 'zain' || collapsed === 'fahad')) return true;
+        // Account Aliases for USG, Media, DCC and Freshmen
+        if (s.id === 'staff-fahad-usg' && (collapsed === 'zain firas' || collapsed === 'zain' || collapsed === 'usg')) return true;
+        if (s.id === 'staff-med-fahad' && (collapsed === 'fahad al kednd' || collapsed === 'fahad al kedndi' || collapsed === 'fahad al kendi' || collapsed === 'fahad' || collapsed.includes('kednd') || collapsed === 'head of media and press' || collapsed === 'head of media and pressi')) return true;
+        if (s.id === 'staff-dcc-lily' && (collapsed === 'lily rabia' || collapsed === 'lily' || collapsed.includes('lily rabia') || collapsed === 'co head dcc' || collapsed === 'lily rabia-co head dcc')) return true;
         if (s.id === 'staff-cer-sultana' && (collapsed === 'sultana al fajar' || collapsed === 'sultana')) return true;
         if (s.id === 'staff-mkt-naya' && (collapsed === 'naya' || collapsed === 'naya barakat')) return true;
         if (s.id === 'staff-mkt-jayda' && (collapsed === 'jadiya' || collapsed === 'jayda' || collapsed === 'jayda yasser')) return true;
@@ -1467,6 +1609,10 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       let finalUser = authenticatedUser;
       if (authenticatedUser.id === 'staff-fahad-usg') {
         finalUser = { ...authenticatedUser, name: 'Zain Firas', customTitle: 'Under Secretary-General' };
+      } else if (authenticatedUser.id === 'staff-med-fahad') {
+        finalUser = { ...authenticatedUser, name: 'Fahad Al Kednd', customTitle: 'Head of Media & Press' };
+      } else if (authenticatedUser.id === 'staff-dcc-lily') {
+        finalUser = { ...authenticatedUser, name: 'Lily Rabia', customTitle: 'Co-Head of DCC' };
       } else if (authenticatedUser.id === 'staff-mkt-naya') {
         finalUser = { ...authenticatedUser, name: 'Naya' };
       } else if (authenticatedUser.id === 'staff-mkt-jayda') {

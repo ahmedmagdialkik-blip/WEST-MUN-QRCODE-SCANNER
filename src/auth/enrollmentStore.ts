@@ -15,6 +15,7 @@
  */
 
 import { EnrolledUser } from './types';
+import { StaffRole } from '../types/venue';
 import { faceApiService } from '../services/faceApiService';
 
 const STORAGE_KEY_ENROLLED = 'west_mun_faceapi_enrolled_users_v3';
@@ -86,7 +87,7 @@ class EnrollmentStore {
     fullName: string;
     profilePhoto: string;
     email?: string;
-    role?: 'super_admin' | 'it' | 'security' | 'executive';
+    role?: StaffRole;
     ticketId?: string;
   }): Promise<EnrolledUser> {
     // Compute face descriptor using FaceAPI from the provided reference image
@@ -107,8 +108,8 @@ class EnrollmentStore {
       descriptor: descriptorArray,
       createdAt: new Date().toISOString(),
       lastLogin: null,
-      role: userData.role || 'it',
-      ticketId: userData.ticketId || `MUN-EXEC-${Math.floor(10 + Math.random() * 90)}`,
+      role: userData.role || 'volunteers',
+      ticketId: userData.ticketId || `MUN-${(userData.role || 'VOL').substring(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
     };
 
     // Check if user with same name already enrolled and update, else push

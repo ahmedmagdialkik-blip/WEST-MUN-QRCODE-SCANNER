@@ -60,6 +60,7 @@ export const TeamManagementView: React.FC = () => {
   // New staff form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
   const [password, setPassword] = useState('1000');
   const [role, setRole] = useState<StaffRole>('volunteers');
   const [assignedGate, setAssignedGate] = useState('MUN Venue');
@@ -134,13 +135,14 @@ export const TeamManagementView: React.FC = () => {
     playClickSound();
     setName('');
     setEmail('');
+    let initialRole: StaffRole = 'volunteers';
     if (defaultRole) {
-      setRole(defaultRole);
+      initialRole = defaultRole;
     } else if (roleFilter !== 'all' && (roleFilter in ROLE_LABELS)) {
-      setRole(roleFilter as StaffRole);
-    } else {
-      setRole('volunteers');
+      initialRole = roleFilter as StaffRole;
     }
+    setRole(initialRole);
+    setCustomTitle(ROLE_LABELS[initialRole]?.title || '');
     const pin = String(Math.floor(1000 + Math.random() * 9000));
     setAccessKey(pin);
     setPassword(pin);
@@ -161,7 +163,7 @@ export const TeamManagementView: React.FC = () => {
     const canScan = isScannerOrAdminRole(assignedRole);
     const pin = accessKey.trim() || String(Math.floor(1000 + Math.random() * 9000));
     const generatedTicketId = `MUN-STAFF-${assignedRole.toUpperCase()}-${pin}`;
-    const roleTitle = ROLE_LABELS[assignedRole]?.title || assignedRole;
+    const roleTitle = customTitle.trim() || ROLE_LABELS[assignedRole]?.title || assignedRole;
 
     const emailToUse =
       email.trim() ||
@@ -186,13 +188,14 @@ export const TeamManagementView: React.FC = () => {
     });
 
     playSuccessChime();
-    showToast('success', `Added ${cleanName} as ${roleTitle} (PIN: ${pin})`);
+    showToast('success', `Added ${cleanName} as ${roleTitle} (${ROLE_LABELS[assignedRole]?.title || assignedRole}) - PIN: ${pin}`);
 
     // Reset filters and search so the new member is immediately visible at the top
     setRoleFilter('all');
     setSearchQuery('');
     setName('');
     setEmail('');
+    setCustomTitle('');
     setIsAddStaffOpen(false);
   };
 
@@ -420,6 +423,11 @@ export const TeamManagementView: React.FC = () => {
                       {staff.name}
                     </span>
 
+                    {/* Official Designated Title Badge */}
+                    <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 bg-[#221a15] text-[#E5C578] border border-[#B08D57]/50 font-serif">
+                      {staff.customTitle || roleMeta?.title || staff.role}
+                    </span>
+
                     {isAdmin && !isAhmedMagdi ? (
                       <select
                         value={staff.role}
@@ -428,32 +436,28 @@ export const TeamManagementView: React.FC = () => {
                           const newTitle = ROLE_LABELS[newRole]?.title || newRole;
                           updateStaffMember(staff.id, {
                             role: newRole,
-                            customTitle: newTitle,
+                            customTitle: staff.customTitle && staff.customTitle !== roleMeta?.title ? staff.customTitle : newTitle,
                           });
                           playSuccessChime();
-                          showToast('success', `Updated ${staff.name}'s role to ${newTitle}`);
+                          showToast('success', `Updated ${staff.name}'s department to ${newTitle}`);
                         }}
-                        className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#221a15] text-[#D4AF37] border border-[#B08D57]/40 font-serif cursor-pointer hover:border-[#D4AF37] focus:outline-none"
-                        title="Click to change this member's department or role"
+                        className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#17120e] text-[#B08D57] border border-[#B08D57]/30 font-serif cursor-pointer hover:border-[#D4AF37] focus:outline-none"
+                        title="Click to reassign this member's department"
                       >
                         <option value="volunteers">Volunteers</option>
+                        <option value="media_and_press">Media & Press</option>
+                        <option value="dcc">DCC</option>
                         <option value="marketing">Marketing</option>
                         <option value="designers">Design</option>
-                        <option value="media_and_press">Media & Press</option>
                         <option value="executive">Executive Board</option>
                         <option value="logistics">Logistics</option>
                         <option value="pr">Public Relations</option>
                         <option value="hr">HR</option>
                         <option value="ceremonies">Ceremonies</option>
-                        <option value="dcc">DCC</option>
                         <option value="security">Security (Scanner Authorized)</option>
                         <option value="it">IT & Systems (Scanner Authorized)</option>
                       </select>
-                    ) : (
-                      <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#221a15] text-[#D4AF37] border border-[#B08D57]/40 font-serif">
-                        {staff.customTitle || roleMeta?.title || staff.role}
-                      </span>
-                    )}
+                    ) : null}
 
                     {canScan ? (
                       <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 font-serif">
@@ -797,22 +801,42 @@ export const TeamManagementView: React.FC = () => {
                 <label className="block text-xs font-serif text-[#B08D57] mb-1">Department / Role</label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value as StaffRole)}
+                  onChange={(e) => {
+                    const newRole = e.target.value as StaffRole;
+                    setRole(newRole);
+                    if (!customTitle || customTitle === ROLE_LABELS[role]?.title) {
+                      setCustomTitle(ROLE_LABELS[newRole]?.title || '');
+                    }
+                  }}
                   className="w-full bg-[#0d0a08] border border-[#B08D57]/40 px-3 py-2 text-xs text-[#F5F2EA] focus:outline-none focus:border-[#B08D57] font-serif cursor-pointer"
                 >
                   <option value="volunteers">Volunteers (Pass Holder)</option>
+                  <option value="media_and_press">Media & Press (Pass Holder)</option>
+                  <option value="dcc">DCC (Pass Holder)</option>
                   <option value="marketing">Marketing (Pass Holder)</option>
                   <option value="designers">Design (Pass Holder)</option>
-                  <option value="media_and_press">Media & Press (Pass Holder)</option>
                   <option value="executive">Executive Board (Pass Holder)</option>
                   <option value="logistics">Logistics (Pass Holder)</option>
                   <option value="pr">Public Relations (Pass Holder)</option>
                   <option value="hr">Human Resources (HR) (Pass Holder)</option>
                   <option value="ceremonies">Ceremonies (Pass Holder)</option>
-                  <option value="dcc">DCC (Pass Holder)</option>
                   <option value="security">Security (Scanner Authorized)</option>
                   <option value="it">IT & Systems (Scanner Authorized)</option>
                 </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-serif text-[#B08D57]">Exact Role Title (Badge & Display)</label>
+                  <span className="text-[10px] text-[#A89F91] font-serif">e.g. Head of Media & Press, Co-Head DCC</span>
+                </div>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="e.g. Head of Media & Press, Co-Head DCC"
+                  className="w-full bg-[#0d0a08] border border-[#B08D57]/40 px-3 py-2 text-xs text-[#E5C578] placeholder-[#6E5D4A] focus:outline-none focus:border-[#B08D57] font-serif"
+                />
               </div>
 
               <div>

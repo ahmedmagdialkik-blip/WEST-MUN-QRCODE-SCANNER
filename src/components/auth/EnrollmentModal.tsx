@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { enrollmentStore } from '../../auth/enrollmentStore';
 import { EnrolledUser } from '../../auth/types';
+import { StaffRole, ROLE_LABELS } from '../../types/venue';
 import { playClickSound, playSuccessChime, playWarningBuzzer } from '../../utils/audio';
 
 interface EnrollmentModalProps {
@@ -37,6 +38,7 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
   onEnrollmentSuccess,
 }) => {
   const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<StaffRole>('volunteers');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -83,10 +85,11 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
       const enrolled = await enrollmentStore.enrollUser({
         fullName: fullName.trim(),
         profilePhoto: previewPhoto,
+        role,
       });
 
       playSuccessChime();
-      setSuccessMsg(`Successfully enrolled ${enrolled.fullName}! 128-d face descriptor computed.`);
+      setSuccessMsg(`Successfully enrolled ${enrolled.fullName} as ${ROLE_LABELS[role]?.title || role}! 128-d face descriptor computed.`);
       setEnrolledList(enrollmentStore.getEnrolledUsers());
       setFullName('');
       setPreviewPhoto(null);
@@ -181,12 +184,36 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Ahmed Magdi"
+                  placeholder="e.g. Fahad Al Kednd"
                   className="w-full bg-[#0A0908] border border-[#B08D57]/40 rounded-xs px-3 py-2 text-sm text-[#F5F2EA] placeholder-[#6E5D4A] focus:outline-none focus:border-[#E5C578] font-serif"
                 />
               </div>
 
               <div>
+                <label className="block text-xs uppercase tracking-wider text-[#CFC7B4] font-serif mb-1.5">
+                  Department / Assigned Role
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as StaffRole)}
+                  className="w-full bg-[#0A0908] border border-[#B08D57]/40 rounded-xs px-3 py-2 text-sm text-[#F5F2EA] focus:outline-none focus:border-[#E5C578] font-serif cursor-pointer"
+                >
+                  <option value="volunteers">Volunteers (Pass Holder)</option>
+                  <option value="media_and_press">Media & Press (Pass Holder)</option>
+                  <option value="dcc">DCC (Pass Holder)</option>
+                  <option value="marketing">Marketing (Pass Holder)</option>
+                  <option value="designers">Design (Pass Holder)</option>
+                  <option value="executive">Executive Board (Pass Holder)</option>
+                  <option value="logistics">Logistics (Pass Holder)</option>
+                  <option value="pr">Public Relations (Pass Holder)</option>
+                  <option value="hr">Human Resources (HR) (Pass Holder)</option>
+                  <option value="ceremonies">Ceremonies (Pass Holder)</option>
+                  <option value="security">Security (Scanner Authorized)</option>
+                  <option value="it">IT & Systems (Scanner Authorized)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
                 <label className="block text-xs uppercase tracking-wider text-[#CFC7B4] font-serif mb-1.5">
                   Reference Portrait Photo
                 </label>
