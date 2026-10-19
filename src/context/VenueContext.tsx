@@ -2218,16 +2218,22 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const canScan = isScannerOrAdminRole(staffData.role);
     const accessPin = staffData.accessKey || String(Math.floor(1000 + Math.random() * 9000));
     const ticketId = staffData.ticketId || `MUN-STAFF-${staffData.role.substring(0, 3).toUpperCase()}-${accessPin}`;
+    const roleTitle = staffData.customTitle || ROLE_LABELS[staffData.role]?.title || staffData.role;
 
     const newStaff: StaffMember = {
       ...staffData,
       id: `staff-${Date.now()}`,
+      customTitle: roleTitle,
       accessKey: accessPin,
       ticketId,
-      assignedGate: 'MUN Venue',
+      assignedGate: staffData.assignedGate || 'MUN Venue',
       canScan,
       canManualCheckIn: canScan,
       canRevokeCheckIn: canScan,
+      canManageStaff: canScan,
+      canExportData: true,
+      isActive: true,
+      lastActiveTime: new Date().toISOString(),
     };
     setStaffMembers((prev) => [...prev, newStaff]);
 
@@ -2238,8 +2244,8 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         name: newStaff.name,
         ticketId,
         category: newStaff.role === 'media_and_press' ? 'Press' : 'Staff',
-        tableOrSeat: 'MUN Venue',
-        notes: `${ROLE_LABELS[newStaff.role]?.title || 'Staff'} Credential Pass`,
+        tableOrSeat: newStaff.assignedGate || 'MUN Venue',
+        notes: `${roleTitle} Credential Pass`,
         status: 'Pending',
         scanCount: 0,
       },
@@ -2250,12 +2256,51 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateStaffMember = useCallback((id: string, updates: Partial<StaffMember>) => {
     setStaffMembers((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+      prev.map((s) => {
+        if (s.id === id) {
+          const effectiveRole = updates.role || s.role;
+          const canScan = isScannerOrAdminRole(effectiveRole);
+          return {
+            ...s,
+            ...updates,
+            ...(updates.role
+              ? {
+                  role: effectiveRole,
+                  customTitle: updates.customTitle || ROLE_LABELS[effectiveRole]?.title || effectiveRole,
+                  canScan,
+                  canManualCheckIn: canScan,
+                  canRevokeCheckIn: canScan,
+                  canManageStaff: canScan,
+                }
+              : {}),
+          };
+        }
+        return s;
+      })
+    );
+
+    // Synchronize guest record if existing
+    setGuests((prev) =>
+      prev.map((g) => {
+        if (g.id === `g-staff-${id}`) {
+          const newRole = updates.role;
+          const roleTitle = updates.customTitle || (newRole ? ROLE_LABELS[newRole]?.title : g.role);
+          return {
+            ...g,
+            name: updates.name || g.name,
+            role: roleTitle || g.role,
+            category: newRole === 'media_and_press' ? 'Press' : 'Staff',
+            notes: `${roleTitle || 'Staff'} Credential Pass`,
+          };
+        }
+        return g;
+      })
     );
   }, []);
 
   const removeStaffMember = useCallback((id: string) => {
     setStaffMembers((prev) => prev.filter((s) => s.id !== id));
+    setGuests((prev) => prev.filter((g) => g.id !== `g-staff-${id}`));
   }, []);
 
   const updateSettings = useCallback((updates: Partial<VenueSettings>) => {

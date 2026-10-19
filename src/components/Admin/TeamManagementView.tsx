@@ -132,18 +132,17 @@ export const TeamManagementView: React.FC = () => {
 
   const openAddStaffModal = (defaultRole?: StaffRole) => {
     playClickSound();
-    if (isIT) {
-      setRole('it');
-    } else if (isSecurity) {
-      setRole('security');
-    } else if (defaultRole) {
+    if (defaultRole) {
       setRole(defaultRole);
+    } else if (roleFilter !== 'all' && (roleFilter in ROLE_LABELS)) {
+      setRole(roleFilter as StaffRole);
     } else {
-      setRole('security');
+      setRole('volunteers');
     }
     const pin = String(Math.floor(1000 + Math.random() * 9000));
     setAccessKey(pin);
     setPassword(pin);
+    setAssignedGate('MUN Venue');
     setIsAddStaffOpen(true);
   };
 
@@ -151,16 +150,19 @@ export const TeamManagementView: React.FC = () => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
-    const assignedRole: StaffRole = isIT ? 'it' : isSecurity ? 'security' : role;
+    // Use the EXACT role picked by the user in the form modal
+    const assignedRole: StaffRole = role;
     const canScan = isScannerOrAdminRole(assignedRole);
     const pin = accessKey.trim() || String(Math.floor(1000 + Math.random() * 9000));
     const generatedTicketId = `MUN-STAFF-${assignedRole.toUpperCase()}-${pin}`;
+    const roleTitle = ROLE_LABELS[assignedRole]?.title || assignedRole;
 
     addStaffMember({
       name: name.trim(),
       email: email.trim(),
       password: pin,
       role: assignedRole,
+      customTitle: roleTitle,
       accessKey: pin,
       ticketId: generatedTicketId,
       assignedGate: assignedGate.trim() || 'MUN Venue',
@@ -174,7 +176,7 @@ export const TeamManagementView: React.FC = () => {
     });
 
     playSuccessChime();
-    showToast('success', `Member ${name.trim()} added with 4-digit PIN ${pin}`);
+    showToast('success', `Member ${name.trim()} added with role ${roleTitle} (PIN ${pin})`);
     setName('');
     setEmail('');
     setIsAddStaffOpen(false);
@@ -382,9 +384,7 @@ export const TeamManagementView: React.FC = () => {
           const canRemove =
             staff.id !== currentUser?.id &&
             !isAhmedMagdi &&
-            (isSuperAdmin ||
-              (isIT && staff.role === 'it') ||
-              (isSecurity && staff.role === 'security'));
+            isAdmin;
 
           return (
             <div
@@ -406,9 +406,40 @@ export const TeamManagementView: React.FC = () => {
                       {staff.name}
                     </span>
 
-                    <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#221a15] text-[#D4AF37] border border-[#B08D57]/40 font-serif">
-                      {staff.customTitle || roleMeta?.title || staff.role}
-                    </span>
+                    {isAdmin && !isAhmedMagdi ? (
+                      <select
+                        value={staff.role}
+                        onChange={(e) => {
+                          const newRole = e.target.value as StaffRole;
+                          const newTitle = ROLE_LABELS[newRole]?.title || newRole;
+                          updateStaffMember(staff.id, {
+                            role: newRole,
+                            customTitle: newTitle,
+                          });
+                          playSuccessChime();
+                          showToast('success', `Updated ${staff.name}'s role to ${newTitle}`);
+                        }}
+                        className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#221a15] text-[#D4AF37] border border-[#B08D57]/40 font-serif cursor-pointer hover:border-[#D4AF37] focus:outline-none"
+                        title="Click to change this member's department or role"
+                      >
+                        <option value="volunteers">Volunteers</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="designers">Design</option>
+                        <option value="media_and_press">Media & Press</option>
+                        <option value="executive">Executive Board</option>
+                        <option value="logistics">Logistics</option>
+                        <option value="pr">Public Relations</option>
+                        <option value="hr">HR</option>
+                        <option value="ceremonies">Ceremonies</option>
+                        <option value="dcc">DCC</option>
+                        <option value="security">Security (Scanner Authorized)</option>
+                        <option value="it">IT & Systems (Scanner Authorized)</option>
+                      </select>
+                    ) : (
+                      <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-[#221a15] text-[#D4AF37] border border-[#B08D57]/40 font-serif">
+                        {staff.customTitle || roleMeta?.title || staff.role}
+                      </span>
+                    )}
 
                     {canScan ? (
                       <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 font-serif">
@@ -753,7 +784,7 @@ export const TeamManagementView: React.FC = () => {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as StaffRole)}
-                  className="w-full bg-[#0d0a08] border border-[#B08D57]/40 px-3 py-2 text-xs text-[#F5F2EA] focus:outline-none focus:border-[#B08D57] font-serif"
+                  className="w-full bg-[#0d0a08] border border-[#B08D57]/40 px-3 py-2 text-xs text-[#F5F2EA] focus:outline-none focus:border-[#B08D57] font-serif cursor-pointer"
                 >
                   <option value="volunteers">Volunteers (Pass Holder)</option>
                   <option value="marketing">Marketing (Pass Holder)</option>
@@ -762,10 +793,11 @@ export const TeamManagementView: React.FC = () => {
                   <option value="executive">Executive Board (Pass Holder)</option>
                   <option value="logistics">Logistics (Pass Holder)</option>
                   <option value="pr">Public Relations (Pass Holder)</option>
+                  <option value="hr">Human Resources (HR) (Pass Holder)</option>
                   <option value="ceremonies">Ceremonies (Pass Holder)</option>
                   <option value="dcc">DCC (Pass Holder)</option>
-                  {(isSuperAdmin || isIT) && <option value="it">IT & Systems (Scanner Authorized)</option>}
-                  {(isSuperAdmin || isSecurity) && <option value="security">Security (Scanner Authorized)</option>}
+                  <option value="security">Security (Scanner Authorized)</option>
+                  <option value="it">IT & Systems (Scanner Authorized)</option>
                 </select>
               </div>
 
