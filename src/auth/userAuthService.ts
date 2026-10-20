@@ -244,6 +244,22 @@ function createInitialUsers(): UserAccount[] {
       lockedUntil: null,
     },
     {
+      id: 'staff-dcc-lily',
+      username: 'lily.rabia',
+      displayName: 'Lily Rabia',
+      passwordHash: bcrypt.hashSync('3791', 10),
+      email: 'lily.rabia@westmun.org',
+      role: 'dcc',
+      customTitle: 'Co-Head of DCC',
+      assignedGate: 'DCC Control Room',
+      ticketId: 'MUN-DCC-02',
+      profilePicture: officialLogoImage,
+      lastLogin: null,
+      accountStatus: 'active',
+      failedAttempts: 0,
+      lockedUntil: null,
+    },
+    {
       id: 'usr-david-miller-disabled-uuid',
       username: 'david.miller',
       displayName: 'David Miller',
@@ -359,6 +375,26 @@ class UserAuthService {
           updated = true;
         }
 
+        if (!parsed.some((u) => u.id === 'staff-dcc-lily' || u.displayName === 'Lily Rabia')) {
+          parsed.push({
+            id: 'staff-dcc-lily',
+            username: 'lily.rabia',
+            displayName: 'Lily Rabia',
+            passwordHash: bcrypt.hashSync('3791', 10),
+            email: 'lily.rabia@westmun.org',
+            role: 'dcc',
+            customTitle: 'Co-Head of DCC',
+            assignedGate: 'DCC Control Room',
+            ticketId: 'MUN-DCC-02',
+            profilePicture: officialLogoImage,
+            lastLogin: null,
+            accountStatus: 'active',
+            failedAttempts: 0,
+            lockedUntil: null,
+          });
+          updated = true;
+        }
+
         this.users = parsed;
         if (updated) {
           this.saveUsers();
@@ -428,6 +464,50 @@ class UserAuthService {
       const uDisplay = u.displayName.toLowerCase();
       const uDisplayStripped = uDisplay.replace(/[^a-z0-9]/g, '');
       const emailPrefix = uEmail.split('@')[0];
+
+      // Specific aliases for Fahad Alkendi / Fahad Al Kednd
+      if (u.id === 'staff-med-fahad') {
+        if (
+          normalized === 'fahad' ||
+          normalized === 'fahad alkendi' ||
+          normalized === 'fahad al kendi' ||
+          normalized === 'fahad al kednd' ||
+          normalized === 'fahad al kedndi' ||
+          normalized === 'fahad alkendnd' ||
+          normalized === 'fahad alkendndi' ||
+          normalized === 'head of media and press' ||
+          normalized === 'head of media and pressi' ||
+          normalized === 'head of media & press' ||
+          normalized === 'head of media & pressi' ||
+          stripped === 'fahadalkendi' ||
+          stripped === 'fahadalkednd' ||
+          stripped === 'fahadalkedndi' ||
+          stripped === 'headofmediaandpress' ||
+          stripped === 'headofmediaandpressi'
+        ) {
+          return true;
+        }
+      }
+
+      // Specific aliases for Lily Rabia
+      if (u.id === 'staff-dcc-lily') {
+        if (
+          normalized === 'lily' ||
+          normalized === 'lily rabia' ||
+          normalized === 'lily rabia-co head dcc' ||
+          normalized === 'lily rabia - co head dcc' ||
+          normalized === 'lily rabia co head dcc' ||
+          normalized === 'co head dcc' ||
+          normalized === 'co-head dcc' ||
+          normalized === 'co-head of dcc' ||
+          normalized === 'co head of dcc' ||
+          stripped === 'lilyrabia' ||
+          stripped === 'lilyrabiacoheaddcc' ||
+          stripped === 'coheaddcc'
+        ) {
+          return true;
+        }
+      }
 
       // Specific aliases for Sultana Al Faraj
       if (u.id === 'staff-cer-sultana') {

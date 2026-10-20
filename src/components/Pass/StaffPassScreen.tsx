@@ -84,9 +84,16 @@ export const StaffPassScreen: React.FC<StaffPassScreenProps> = ({ initialTab = '
     currentUser?.ticketId ||
     `MUN-STAFF-${currentUser?.role.toUpperCase()}-${currentUser?.accessKey || '0000'}`;
 
-  const guestRecord = guests.find(
-    (g) => g.ticketId.toLowerCase() === staffTicketCode.toLowerCase()
-  );
+  const guestRecord = useMemo(() => {
+    if (!currentUser) return null;
+    return guests.find(
+      (g) =>
+        (g.ticketId && staffTicketCode && g.ticketId.toLowerCase().trim() === staffTicketCode.toLowerCase().trim()) ||
+        (g.ticketId && currentUser.ticketId && g.ticketId.toLowerCase().trim() === currentUser.ticketId.toLowerCase().trim()) ||
+        (g.id && (g.id === currentUser.id || g.id === `g-staff-${currentUser.id}` || g.id === `g-${currentUser.id}`)) ||
+        (g.name && currentUser.name && g.name.toLowerCase().trim() === currentUser.name.toLowerCase().trim())
+    );
+  }, [guests, currentUser, staffTicketCode]);
 
   const isCheckedIn = guestRecord?.status === 'Checked-In';
   const hasLeft = guestRecord?.status === 'Left';
@@ -338,26 +345,41 @@ export const StaffPassScreen: React.FC<StaffPassScreenProps> = ({ initialTab = '
         </div>
 
         {/* Current Door Status */}
-        <div className="mt-4 pt-3 border-t border-[#B08D57]/20 flex items-center justify-between text-xs font-serif">
-          <span className="text-neutral-400">Current Status:</span>
-          <span
-            className={`font-semibold flex items-center gap-1.5 ${
-              isCheckedIn ? 'text-emerald-400' : hasLeft ? 'text-amber-400' : 'text-[#B08D57]'
-            }`}
-          >
+        <div className="mt-4 pt-3 border-t border-[#B08D57]/20 flex flex-col gap-1.5 text-xs font-serif">
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-400">Current Status:</span>
             <span
-              className={`w-2 h-2 rounded-full ${
-                isCheckedIn ? 'bg-emerald-400' : hasLeft ? 'bg-amber-400' : 'bg-neutral-500'
+              className={`font-semibold flex items-center gap-1.5 ${
+                isCheckedIn ? 'text-emerald-400' : hasLeft ? 'text-amber-400' : 'text-[#B08D57]'
               }`}
-            />
-            <span>
-              {isCheckedIn
-                ? 'Inside Venue (Validated)'
-                : hasLeft
-                ? 'Departed (Re-entry Allowed)'
-                : 'Pending Entrance Scan'}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isCheckedIn ? 'bg-emerald-400 animate-pulse' : hasLeft ? 'bg-amber-400' : 'bg-neutral-500'
+                }`}
+              />
+              <span className="font-bold tracking-wide">
+                {isCheckedIn
+                  ? 'Entry Approved'
+                  : hasLeft
+                  ? 'Departed (Re-entry Allowed)'
+                  : 'Pending Scan'}
+              </span>
             </span>
-          </span>
+          </div>
+
+          {/* If checked in, display verified scan timestamp and security staff */}
+          {isCheckedIn && (
+            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono bg-[#110d0a] px-2.5 py-1.5 border border-emerald-500/30">
+              <span className="text-emerald-400 font-serif">✓ Verified by:</span>
+              <span className="text-neutral-200 truncate max-w-[190px]">
+                {guestRecord?.checkedInBy || 'Security Officer'}
+                {guestRecord?.checkedInTime
+                  ? ` • ${new Date(guestRecord.checkedInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : ''}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Direct Action Button to My Team for Heads & Co-Heads */}

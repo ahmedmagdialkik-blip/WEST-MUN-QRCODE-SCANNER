@@ -26,6 +26,8 @@ import { isScannerOrAdminRole, ROLE_LABELS, StaffMember } from './types/venue';
 import { isHeadOrCoHead } from './utils/teamHierarchy';
 import { DepartmentTeamView } from './components/Admin/DepartmentTeamView';
 import { TaskCompletionToast } from './components/Notifications/TaskCompletionToast';
+import { DoorEntryConfirmationAnimation } from './components/Pass/DoorEntryConfirmationAnimation';
+import { Info, X } from 'lucide-react';
 
 type AppFlowStage =
   | 'intro'
@@ -44,6 +46,10 @@ function MainVenueContent() {
     currentUser,
     lastScanResult,
     clearLastScanResult,
+    attendeeEntryAnimation,
+    dismissAttendeeEntryAnimation,
+    alreadyEnteredNotice,
+    dismissAlreadyEnteredNotice,
   } = useVenue();
 
   // Website Flow:
@@ -269,6 +275,39 @@ function MainVenueContent() {
 
       {/* Instant Task Completion Notification Toast for Heads & Co-Heads */}
       <TaskCompletionToast />
+
+      {/* Full-Screen Key & Door Entry Confirmation Animation for Checked-In Attendee */}
+      {attendeeEntryAnimation && (
+        <DoorEntryConfirmationAnimation
+          guestName={attendeeEntryAnimation.guestName}
+          ticketId={attendeeEntryAnimation.ticketId}
+          scannerName={attendeeEntryAnimation.scannerName}
+          scanTime={attendeeEntryAnimation.scanTime}
+          onComplete={dismissAttendeeEntryAnimation}
+        />
+      )}
+
+      {/* Small Notification for Duplicate Scans When Attendee Already Inside */}
+      {alreadyEnteredNotice && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[90] max-w-md w-[92%] px-4 py-3 bg-[#18120d] border border-[#d4af37] text-[#F5F2EA] shadow-2xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-base shrink-0">🔓</span>
+            <div className="text-xs font-serif leading-snug">
+              <strong className="text-[#D4AF37] block">Attendee Already Entered</strong>
+              <span className="text-neutral-300 text-[11px]">
+                {alreadyEnteredNotice.guestName} entered at {alreadyEnteredNotice.time} (Verified by {alreadyEnteredNotice.scanner}).
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={dismissAlreadyEnteredNotice}
+            className="p-1 hover:bg-[#251e18] text-neutral-400 hover:text-white transition cursor-pointer shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

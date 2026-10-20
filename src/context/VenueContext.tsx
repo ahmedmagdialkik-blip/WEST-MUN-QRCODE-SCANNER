@@ -85,6 +85,19 @@ interface VenueContextType {
     vipTotal: number;
     recentCheckIns: CheckInLogEntry[];
   };
+  attendeeEntryAnimation: {
+    guestName: string;
+    ticketId: string;
+    scannerName?: string;
+    scanTime?: string;
+  } | null;
+  dismissAttendeeEntryAnimation: () => void;
+  alreadyEnteredNotice: {
+    guestName: string;
+    time: string;
+    scanner: string;
+  } | null;
+  dismissAlreadyEnteredNotice: () => void;
 }
 
 const STORAGE_KEY_GUESTS = 'west_mun_guests_v14_trends_and_eggs';
@@ -94,6 +107,7 @@ const STORAGE_KEY_LOGS = 'west_mun_logs_v14_trends_and_eggs';
 const STORAGE_KEY_AUTH = 'west_mun_auth_v14_trends_and_eggs';
 const STORAGE_KEY_TASKS = 'west_mun_tasks_v15_completion_notifs';
 const STORAGE_KEY_TASK_EVENT = 'west_mun_last_task_completion_event';
+const STORAGE_KEY_CHECKIN_EVENT = 'west_mun_last_checkin_event_v15';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -1721,30 +1735,30 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const parsed: Guest[] = JSON.parse(saved);
         const updated = parsed.map((g) => {
           // Under Secretary-General is Zain Firas
-          if ((g.id === 'g-exec-fahad' || g.role === 'Under Secretary-General') && g.id !== 'g-med-fahad') {
+          if (g.id === 'g-exec-fahad' || (g.role === 'Under Secretary-General' && g.id !== 'g-med-fahad')) {
             return { ...g, name: 'Zain Firas', role: 'Under Secretary-General' };
           }
           // Fahad Alkendi - Head of Media & Press
-          if (g.id === 'g-med-fahad' || (g.name.toLowerCase().includes('fahad') && g.id !== 'g-exec-fahad')) {
+          if (g.id === 'g-med-fahad') {
             return { ...g, id: 'g-med-fahad', name: 'Fahad Alkendi', role: 'Head of Media & Press', category: 'Press' as const };
           }
           // Lily Rabia - Co-Head of DCC
-          if (g.id === 'g-dcc-lily' || g.name.toLowerCase().includes('lily')) {
+          if (g.id === 'g-dcc-lily') {
             return { ...g, id: 'g-dcc-lily', name: 'Lily Rabia', role: 'Co-Head of DCC', category: 'Staff' as const };
           }
-          if (g.id === 'g-mkt-naya' || g.name.toLowerCase() === 'naya barakat') {
+          if (g.id === 'g-mkt-naya') {
             return { ...g, name: 'Naya', role: 'Head of Marketing' };
           }
-          if (g.id === 'g-mkt-jayda' || g.name.toLowerCase().includes('jayda')) {
+          if (g.id === 'g-mkt-jayda') {
             return { ...g, name: 'Jadiya', role: 'Marketing Member' };
           }
-          if (g.id === 'g-med-selena' || g.name.toLowerCase().includes('selena')) {
+          if (g.id === 'g-med-selena') {
             return { ...g, name: 'Noor', role: 'Head of Female Media' };
           }
-          if (g.id === 'g-med-dana' || g.name.toLowerCase().includes('dana')) {
+          if (g.id === 'g-med-dana') {
             return { ...g, id: 'g-med-dana', name: 'Dana Al Najjar', role: 'Head of Female Press' };
           }
-          if (g.id === 'g-cer-sultana' || g.name.toLowerCase().includes('sultana') || g.name.toLowerCase().includes('fajar')) {
+          if (g.id === 'g-cer-sultana') {
             return { ...g, id: 'g-cer-sultana', name: 'Sultana Al Faraj', role: 'Head of Ceremonies' };
           }
           return g;
@@ -1820,7 +1834,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           }
           // Fahad Alkendi (Head of Media & Press)
-          if (s.id === 'staff-med-fahad' || (s.name.toLowerCase().includes('fahad') && s.id !== 'staff-fahad-usg')) {
+          if (s.id === 'staff-med-fahad') {
             return {
               ...s,
               id: 'staff-med-fahad',
@@ -1835,7 +1849,7 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           }
           // Lily Rabia (Co-Head of DCC)
-          if (s.id === 'staff-dcc-lily' || (s.name.toLowerCase().includes('lily') && s.id.includes('dcc'))) {
+          if (s.id === 'staff-dcc-lily') {
             return {
               ...s,
               id: 'staff-dcc-lily',
@@ -2092,6 +2106,93 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Active instant notification card for task completion
   const [activeNotification, setActiveNotification] = useState<TaskCompletionNotificationEvent | null>(null);
 
+  // Real-Time Entry Door Animation & Re-Scan Notice for Attendee
+  const [attendeeEntryAnimation, setAttendeeEntryAnimation] = useState<{
+    guestName: string;
+    ticketId: string;
+    scannerName?: string;
+    scanTime?: string;
+  } | null>(null);
+
+  const [alreadyEnteredNotice, setAlreadyEnteredNotice] = useState<{
+    guestName: string;
+    time: string;
+    scanner: string;
+  } | null>(null);
+
+  const dismissAttendeeEntryAnimation = useCallback(() => {
+    setAttendeeEntryAnimation(null);
+  }, []);
+
+  const dismissAlreadyEnteredNotice = useCallback(() => {
+    setAlreadyEnteredNotice(null);
+  }, []);
+
+  // Internal handler for when a check-in or re-scan event occurs
+  const handleIncomingCheckInEvent = useCallback(
+    (event: {
+      eventId?: string;
+      type: string;
+      guestId?: string;
+      ticketId?: string;
+      guestName?: string;
+      scannerName?: string;
+      timestamp: string;
+      isAlreadyCheckedIn?: boolean;
+      previousTime?: string;
+      previousScanner?: string;
+    }) => {
+      if (!currentUser || !event) return;
+
+      const cTicket = (currentUser.ticketId || '').toLowerCase().trim();
+      const eTicket = (event.ticketId || '').toLowerCase().trim();
+      const cName = (currentUser.name || '').toLowerCase().trim();
+      const eName = (event.guestName || '').toLowerCase().trim();
+      const cId = (currentUser.id || '').toLowerCase();
+      const eId = (event.guestId || '').toLowerCase();
+
+      const isMatch =
+        (eTicket && cTicket && eTicket === cTicket) ||
+        (eName && cName && (eName === cName || cName.includes(eName) || eName.includes(cName))) ||
+        (eId && (eId === cId || eId === `g-staff-${cId}` || eId === `g-${cId}`));
+
+      if (!isMatch) return;
+
+      if (event.isAlreadyCheckedIn) {
+        // Notification for duplicate scan attempt
+        setAlreadyEnteredNotice({
+          guestName: currentUser.name,
+          time: event.previousTime
+            ? new Date(event.previousTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'earlier',
+          scanner: event.previousScanner || 'Security Officer',
+        });
+        return;
+      }
+
+      if (event.type === 'CHECK_IN_SUCCESS') {
+        // Play once per verified check-in session
+        const playedKey = `west_mun_played_entry_anim_${event.ticketId || currentUser.id}_${event.timestamp}`;
+        try {
+          if (localStorage.getItem(playedKey) === 'true') {
+            return;
+          }
+          localStorage.setItem(playedKey, 'true');
+        } catch {
+          // ignore
+        }
+
+        setAttendeeEntryAnimation({
+          guestName: currentUser.name,
+          ticketId: currentUser.ticketId || event.ticketId || 'MUN-PASS',
+          scannerName: event.scannerName || 'Security Command',
+          scanTime: event.timestamp,
+        });
+      }
+    },
+    [currentUser]
+  );
+
   // Persistence
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_GUESTS, JSON.stringify(guests));
@@ -2121,38 +2222,76 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentUser]);
 
-  // Sync across tabs and handle task completion broadcast events
+  // Real-time synchronization across browser tabs, windows, and devices
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. BroadcastChannel sync
+    // 1. BroadcastChannel real-time sync
     let channel: BroadcastChannel | null = null;
     if ('BroadcastChannel' in window) {
-      channel = new BroadcastChannel('mun_venue_sync');
-      channel.onmessage = (event) => {
-        const data = event.data;
-        if (!data) return;
-        if (data.type === 'SYNC_ALL') {
-          if (data.guests) setGuests(data.guests);
-          if (data.logs) setLogs(data.logs);
-        }
-        if (data.type === 'SYNC_TASKS' && data.tasks) {
-          setTasks(data.tasks);
-        }
-        if (data.type === 'TASK_COMPLETED_EVENT' && data.notification) {
-          const notif: TaskCompletionNotificationEvent = data.notification;
-          // STRICT PERMISSION: Only the Head/Co-Head who assigned this task receives notification and buzz
-          if (currentUser && currentUser.id === notif.assignerId) {
-            setActiveNotification(notif);
-            vibrateTaskCompletion();
-            playTaskCompletionChime();
+      try {
+        channel = new BroadcastChannel('mun_venue_sync');
+        channel.onmessage = (event) => {
+          const data = event.data;
+          if (!data) return;
+          if (data.type === 'SYNC_ALL') {
+            if (data.guests) setGuests(data.guests);
+            if (data.logs) setLogs(data.logs);
           }
-        }
-      };
+          if (data.type === 'CHECK_IN_SUCCESS_EVENT' && data.event) {
+            handleIncomingCheckInEvent(data.event);
+          }
+          if (data.type === 'SYNC_TASKS' && data.tasks) {
+            setTasks(data.tasks);
+          }
+          if (data.type === 'TASK_COMPLETED_EVENT' && data.notification) {
+            const notif: TaskCompletionNotificationEvent = data.notification;
+            if (currentUser && currentUser.id === notif.assignerId) {
+              setActiveNotification(notif);
+              vibrateTaskCompletion();
+              playTaskCompletionChime();
+            }
+          }
+        };
+      } catch (err) {
+        console.warn('BroadcastChannel error:', err);
+      }
     }
 
-    // 2. Window storage event listener (cross-window fallback)
+    // 2. Window storage event listener (cross-tab / cross-window instant sync)
     const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY_GUESTS && e.newValue) {
+        try {
+          const parsed: Guest[] = JSON.parse(e.newValue);
+          setGuests(parsed);
+        } catch {
+          // ignore
+        }
+      }
+      if (e.key === STORAGE_KEY_LOGS && e.newValue) {
+        try {
+          const parsedLogs: CheckInLogEntry[] = JSON.parse(e.newValue);
+          setLogs(parsedLogs);
+        } catch {
+          // ignore
+        }
+      }
+      if (e.key === STORAGE_KEY_STAFF && e.newValue) {
+        try {
+          const parsedStaff: StaffMember[] = JSON.parse(e.newValue);
+          setStaffMembers(parsedStaff);
+        } catch {
+          // ignore
+        }
+      }
+      if (e.key === STORAGE_KEY_CHECKIN_EVENT && e.newValue) {
+        try {
+          const eventData = JSON.parse(e.newValue);
+          handleIncomingCheckInEvent(eventData);
+        } catch {
+          // ignore
+        }
+      }
       if (e.key === STORAGE_KEY_TASKS && e.newValue) {
         try {
           setTasks(JSON.parse(e.newValue));
@@ -2163,7 +2302,6 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (e.key === STORAGE_KEY_TASK_EVENT && e.newValue) {
         try {
           const notif: TaskCompletionNotificationEvent = JSON.parse(e.newValue);
-          // STRICT PERMISSION: Only the Head/Co-Head who assigned this task receives notification and buzz
           if (currentUser && currentUser.id === notif.assignerId) {
             setActiveNotification(notif);
             vibrateTaskCompletion();
@@ -2177,27 +2315,83 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     window.addEventListener('storage', handleStorage);
 
+    // 3. Periodic real-time poll fallback (every 1000ms) to ensure instant synchronization
+    let lastGuestJson = '';
+    const pollInterval = setInterval(() => {
+      try {
+        const storedGuests = localStorage.getItem(STORAGE_KEY_GUESTS);
+        if (storedGuests && storedGuests !== lastGuestJson) {
+          lastGuestJson = storedGuests;
+          const parsed: Guest[] = JSON.parse(storedGuests);
+          setGuests((prev) => {
+            if (JSON.stringify(prev) !== storedGuests) {
+              return parsed;
+            }
+            return prev;
+          });
+        }
+        const lastCheckIn = localStorage.getItem(STORAGE_KEY_CHECKIN_EVENT);
+        if (lastCheckIn) {
+          const ev = JSON.parse(lastCheckIn);
+          handleIncomingCheckInEvent(ev);
+        }
+      } catch {
+        // ignore
+      }
+    }, 1000);
+
     return () => {
       if (channel) channel.close();
       window.removeEventListener('storage', handleStorage);
+      clearInterval(pollInterval);
     };
-  }, [currentUser]);
+  }, [currentUser, handleIncomingCheckInEvent]);
 
-  const broadcastUpdate = useCallback((updatedGuests: Guest[], updatedLogs: CheckInLogEntry[]) => {
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        const channel = new BroadcastChannel('mun_venue_sync');
-        channel.postMessage({
-          type: 'SYNC_ALL',
-          guests: updatedGuests,
-          logs: updatedLogs,
-        });
-        channel.close();
-      } catch (e) {
-        console.warn('Broadcast failed', e);
+  const broadcastUpdate = useCallback(
+    (
+      updatedGuests: Guest[],
+      updatedLogs: CheckInLogEntry[],
+      checkInEvent?: {
+        eventId?: string;
+        type: string;
+        guestId?: string;
+        ticketId?: string;
+        guestName?: string;
+        scannerName?: string;
+        timestamp: string;
+        isAlreadyCheckedIn?: boolean;
+        previousTime?: string;
+        previousScanner?: string;
       }
-    }
-  }, []);
+    ) => {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const channel = new BroadcastChannel('mun_venue_sync');
+          channel.postMessage({
+            type: 'SYNC_ALL',
+            guests: updatedGuests,
+            logs: updatedLogs,
+          });
+          if (checkInEvent) {
+            channel.postMessage({
+              type: 'CHECK_IN_SUCCESS_EVENT',
+              event: checkInEvent,
+            });
+          }
+          setTimeout(() => {
+            try {
+              channel.close();
+            } catch {
+              // ignore
+            }
+          }, 350);
+        } catch (e) {
+          console.warn('Broadcast failed', e);
+        }
+      }
+    },
+    []
+  );
 
   // Account Authentication methods
   // Password-Free Diplomatic Authentication method
@@ -2775,7 +2969,29 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const updatedLogs = [newLog, ...logs];
         setGuests(updatedGuests);
         setLogs(updatedLogs);
-        broadcastUpdate(updatedGuests, updatedLogs);
+
+        const alreadyCheckedInEvent = {
+          eventId: `ev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          type: 'ALREADY_CHECKED_IN',
+          guestId: updatedGuest.id,
+          ticketId: updatedGuest.ticketId,
+          guestName: updatedGuest.name,
+          scannerName: currentScannerName,
+          timestamp: nowIso,
+          isAlreadyCheckedIn: true,
+          previousTime: guest.checkedInTime || undefined,
+          previousScanner: guest.checkedInBy || undefined,
+        };
+
+        try {
+          localStorage.setItem(STORAGE_KEY_CHECKIN_EVENT, JSON.stringify(alreadyCheckedInEvent));
+        } catch {
+          // ignore
+        }
+
+        broadcastUpdate(updatedGuests, updatedLogs, alreadyCheckedInEvent);
+        handleIncomingCheckInEvent(alreadyCheckedInEvent);
+
         setLastScanResult(res);
         return res;
       }
@@ -2812,7 +3028,26 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const updatedLogs = [newLog, ...logs];
       setGuests(updatedGuests);
       setLogs(updatedLogs);
-      broadcastUpdate(updatedGuests, updatedLogs);
+
+      const checkInEventData = {
+        eventId: `ev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: 'CHECK_IN_SUCCESS',
+        guestId: updatedGuest.id,
+        ticketId: updatedGuest.ticketId,
+        guestName: updatedGuest.name,
+        scannerName: currentScannerName,
+        timestamp: nowIso,
+        isReEntry,
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY_CHECKIN_EVENT, JSON.stringify(checkInEventData));
+      } catch {
+        // ignore
+      }
+
+      broadcastUpdate(updatedGuests, updatedLogs, checkInEventData);
+      handleIncomingCheckInEvent(checkInEventData);
 
       if (settings.soundEnabled) playSuccessChime();
       if (settings.vibrationEnabled) vibrateSuccess();
@@ -2930,13 +3165,32 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const updatedLogs = [newLog, ...logs];
       setGuests(updatedGuests);
       setLogs(updatedLogs);
-      broadcastUpdate(updatedGuests, updatedLogs);
+
+      const checkInEventData = {
+        eventId: `ev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: 'CHECK_IN_SUCCESS',
+        guestId: updatedGuest.id,
+        ticketId: updatedGuest.ticketId,
+        guestName: updatedGuest.name,
+        scannerName: currentScannerName,
+        timestamp: nowIso,
+        isReEntry,
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY_CHECKIN_EVENT, JSON.stringify(checkInEventData));
+      } catch {
+        // ignore
+      }
+
+      broadcastUpdate(updatedGuests, updatedLogs, checkInEventData);
+      handleIncomingCheckInEvent(checkInEventData);
 
       if (settings.soundEnabled) playSuccessChime();
       if (settings.vibrationEnabled) vibrateSuccess();
       return true;
     },
-    [guests, logs, currentUser, settings, broadcastUpdate]
+    [guests, logs, currentUser, settings, broadcastUpdate, handleIncomingCheckInEvent]
   );
 
   const undoCheckIn = useCallback(
@@ -3468,6 +3722,10 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeNotification,
         dismissNotification,
         stats,
+        attendeeEntryAnimation,
+        dismissAttendeeEntryAnimation,
+        alreadyEnteredNotice,
+        dismissAlreadyEnteredNotice,
       }}
     >
       {children}
