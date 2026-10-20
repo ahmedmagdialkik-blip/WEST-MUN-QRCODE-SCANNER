@@ -4,6 +4,7 @@ import { StaffMember, StaffRole, ROLE_LABELS, isScannerOrAdminRole } from '../..
 import { DeploymentGuideModal } from './DeploymentGuideModal';
 import { OnboardingCredentialsModal } from './OnboardingCredentialsModal';
 import { BatchCredentialsModal } from './BatchCredentialsModal';
+import { DepartmentTeamView } from './DepartmentTeamView';
 import {
   ShieldCheck,
   UserPlus,
@@ -56,6 +57,7 @@ export const TeamManagementView: React.FC = () => {
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastNotification, setToastNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [teamViewMode, setTeamViewMode] = useState<'department_delegation' | 'all_credentials'>('department_delegation');
 
   // New staff form state
   const [name, setName] = useState('');
@@ -247,8 +249,48 @@ export const TeamManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#B08D57]/30 pb-3">
+      {/* Leadership Mode Switcher: Department Team vs All Credentials */}
+      <div className="flex items-center justify-center gap-2 max-w-md mx-auto mb-1">
+        <button
+          type="button"
+          onClick={() => {
+            playClickSound();
+            setTeamViewMode('department_delegation');
+          }}
+          className={`flex-1 py-2 px-3 text-xs uppercase font-serif tracking-wider transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+            teamViewMode === 'department_delegation'
+              ? 'bg-[#261d17] text-[#D4AF37] border-[#B08D57] font-bold shadow-md'
+              : 'bg-[#140f0c] text-neutral-400 border-[#B08D57]/30 hover:text-[#F5F2EA]'
+          }`}
+          style={{ fontFamily: "'Cinzel', serif" }}
+        >
+          <Crown className="w-3.5 h-3.5 text-[#B08D57]" />
+          <span>Department Team & Roles</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            playClickSound();
+            setTeamViewMode('all_credentials');
+          }}
+          className={`flex-1 py-2 px-3 text-xs uppercase font-serif tracking-wider transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+            teamViewMode === 'all_credentials'
+              ? 'bg-[#261d17] text-[#D4AF37] border-[#B08D57] font-bold shadow-md'
+              : 'bg-[#140f0c] text-neutral-400 border-[#B08D57]/30 hover:text-[#F5F2EA]'
+          }`}
+          style={{ fontFamily: "'Cinzel', serif" }}
+        >
+          <Key className="w-3.5 h-3.5 text-[#B08D57]" />
+          <span>All Passwords & PINs</span>
+        </button>
+      </div>
+
+      {teamViewMode === 'department_delegation' ? (
+        <DepartmentTeamView />
+      ) : (
+        <>
+          {/* Header bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#B08D57]/30 pb-3">
         <div>
           <div className="flex items-center gap-2">
             <h1
@@ -717,6 +759,8 @@ export const TeamManagementView: React.FC = () => {
           </div>
         </form>
       </div>
+      </>
+      )}
 
       {/* Add Member Modal */}
       {isAddStaffOpen && (

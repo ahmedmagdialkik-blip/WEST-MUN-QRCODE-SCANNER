@@ -34,3 +34,17 @@ export function vibrateError() {
     }
   }
 }
+
+/**
+ * Short distinct vibration buzz for Task Completion notifications
+ */
+export function vibrateTaskCompletion() {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      // Distinct, short buzz pattern for task completion: 90ms buzz, 40ms pause, 130ms buzz
+      navigator.vibrate([90, 40, 130]);
+    } catch {
+      // ignore
+    }
+  }
+}

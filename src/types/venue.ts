@@ -216,3 +216,49 @@ export const ROLE_LABELS: Record<StaffRole, { title: string; badge: string; desc
     canScan: false,
   },
 };
+
+export type TaskStatus = 'pending' | 'completed';
+export type TaskPriority = 'normal' | 'high' | 'urgent';
+
+export interface TeamTask {
+  id: string;
+  title: string;
+  description: string;
+  department: StaffRole;
+  assignerId: string;
+  assignerName: string;
+  assignerRole?: string;
+  assigneeIds: string[];
+  assigneeNames: string[];
+  dueDate?: string;
+  priority?: TaskPriority;
+  status: TaskStatus;
+  createdAt: string;
+  completedAt?: string;
+  completedBy?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface TaskCompletionNotificationEvent {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  completedByName: string;
+  completedById: string;
+  assignerId: string;
+  timestamp: string;
+}
+
+export interface CheckInSuccessEvent {
+  id: string;
+  ticketId: string;
+  guestName: string;
+  guestId: string;
+  timestamp: string;
+  scannerName: string;
+  gate: string;
+  isReEntry: boolean;
+}
+

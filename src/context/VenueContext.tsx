@@ -8,9 +8,22 @@ import {
   CheckInLogEntry,
   ROLE_LABELS,
   isScannerOrAdminRole,
+  TeamTask,
+  TaskCompletionNotificationEvent,
 } from '../types/venue';
-import { playSuccessChime, playWarningBuzzer, playErrorAlarm, playSecurityAlertSiren } from '../utils/audio';
-import { vibrateSuccess, vibrateWarning, vibrateError } from '../utils/haptics';
+import {
+  playSuccessChime,
+  playWarningBuzzer,
+  playErrorAlarm,
+  playSecurityAlertSiren,
+  playTaskCompletionChime,
+} from '../utils/audio';
+import {
+  vibrateSuccess,
+  vibrateWarning,
+  vibrateError,
+  vibrateTaskCompletion,
+} from '../utils/haptics';
 import confetti from 'canvas-confetti';
 
 interface VenueContextType {
@@ -44,9 +57,23 @@ interface VenueContextType {
   loadSampleData: () => void;
   addStaffMember: (staff: Omit<StaffMember, 'id'>) => StaffMember;
   updateStaffMember: (id: string, updates: Partial<StaffMember>) => void;
+  assignTeamMemberRole: (
+    memberId: string,
+    specificRole: string,
+    options?: { assignedGate?: string; notes?: string }
+  ) => { success: boolean; error?: string };
   removeStaffMember: (id: string) => void;
   updateSettings: (updates: Partial<VenueSettings>) => void;
   clearLastScanResult: () => void;
+  tasks: TeamTask[];
+  createTask: (taskData: Omit<TeamTask, 'id' | 'status' | 'createdAt'>) => TeamTask;
+  completeTask: (
+    taskId: string,
+    completedByMember?: { id: string; name: string }
+  ) => { success: boolean; task?: TeamTask; error?: string };
+  deleteTask: (taskId: string) => void;
+  activeNotification: TaskCompletionNotificationEvent | null;
+  dismissNotification: (id?: string) => void;
   stats: {
     totalGuests: number;
     checkedInCount: number;
@@ -65,6 +92,8 @@ const STORAGE_KEY_STAFF = 'west_mun_staff_v14_trends_and_eggs';
 const STORAGE_KEY_SETTINGS = 'west_mun_settings_v14_trends_and_eggs';
 const STORAGE_KEY_LOGS = 'west_mun_logs_v14_trends_and_eggs';
 const STORAGE_KEY_AUTH = 'west_mun_auth_v14_trends_and_eggs';
+const STORAGE_KEY_TASKS = 'west_mun_tasks_v15_completion_notifs';
+const STORAGE_KEY_TASK_EVENT = 'west_mun_last_task_completion_event';
 
 const DEFAULT_SETTINGS: VenueSettings = {
   venueName: 'MUN Venue',
@@ -692,6 +721,272 @@ const INITIAL_STAFF: StaffMember[] = [
     isActive: true,
     lastActiveTime: new Date().toISOString(),
   },
+
+  // Ceremonies Team Members (under Sultana Al Faraj)
+  {
+    id: 'staff-cer-reem',
+    name: 'Reem Al Shammari',
+    email: 'reem.ceremonies@westmun.org',
+    customTitle: 'Ceremonies Stage Coordinator',
+    password: '4829',
+    role: 'ceremonies',
+    accessKey: '4829',
+    assignedGate: 'Ceremonies Stage',
+    ticketId: 'MUN-CER-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-cer-talia',
+    name: 'Talia Nasser',
+    email: 'talia.ceremonies@westmun.org',
+    customTitle: 'Protocol & Awards Assistant',
+    password: '5930',
+    role: 'ceremonies',
+    accessKey: '5930',
+    assignedGate: 'VIP Holding Lounge',
+    ticketId: 'MUN-CER-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // DCC Team Members (under Majd & Lily Rabia)
+  {
+    id: 'staff-dcc-ryan',
+    name: 'Ryan Haddad',
+    email: 'ryan.dcc@westmun.org',
+    customTitle: 'Resolution Formatting Specialist',
+    password: '6041',
+    role: 'dcc',
+    accessKey: '6041',
+    assignedGate: 'DCC Control Room',
+    ticketId: 'MUN-DCC-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-dcc-salma',
+    name: 'Salma Fathy',
+    email: 'salma.dcc@westmun.org',
+    customTitle: 'Digital Display Coordinator',
+    password: '7152',
+    role: 'dcc',
+    accessKey: '7152',
+    assignedGate: 'Assembly Hall Tech Booth',
+    ticketId: 'MUN-DCC-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Logistics Team Members (under Ahmed El Amir)
+  {
+    id: 'staff-log-kareem',
+    name: 'Kareem Tarek',
+    email: 'kareem.logistics@westmun.org',
+    customTitle: 'Logistics Coordinator',
+    password: '8263',
+    role: 'logistics',
+    accessKey: '8263',
+    assignedGate: 'Central Storage',
+    ticketId: 'MUN-LOG-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-log-zaid',
+    name: 'Zaid Mansoor',
+    email: 'zaid.logistics@westmun.org',
+    customTitle: 'Venue Setup Specialist',
+    password: '9374',
+    role: 'logistics',
+    accessKey: '9374',
+    assignedGate: 'Main Hall Dispatch',
+    ticketId: 'MUN-LOG-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // PR Team Members (under Mazen Alaa)
+  {
+    id: 'staff-pr-farida',
+    name: 'Farida Hany',
+    email: 'farida.pr@westmun.org',
+    customTitle: 'VIP Relations Officer',
+    password: '1485',
+    role: 'pr',
+    accessKey: '1485',
+    assignedGate: 'VIP Relations Suite',
+    ticketId: 'MUN-PR-02',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-pr-omar',
+    name: 'Omar Khaled',
+    email: 'omar.pr@westmun.org',
+    customTitle: 'Press Liaison',
+    password: '2596',
+    role: 'pr',
+    accessKey: '2596',
+    assignedGate: 'Diplomatic Entrance',
+    ticketId: 'MUN-PR-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // HR Team Members (under Hoorein & Seif Ayman)
+  {
+    id: 'staff-hr-leen',
+    name: 'Leen Badr',
+    email: 'leen.hr@westmun.org',
+    customTitle: 'Staff Welfare Coordinator',
+    password: '3607',
+    role: 'hr',
+    accessKey: '3607',
+    assignedGate: 'HR Operations Office',
+    ticketId: 'MUN-HR-03',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-hr-tarek',
+    name: 'Tarek Zaki',
+    email: 'tarek.hr@westmun.org',
+    customTitle: 'Roster & Attendance Officer',
+    password: '4718',
+    role: 'hr',
+    accessKey: '4718',
+    assignedGate: 'Staff Check-in Hub',
+    ticketId: 'MUN-HR-04',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Media & Press Team Members (under Fahad Alkendi & Dana Al Najjar)
+  {
+    id: 'staff-med-mariam',
+    name: 'Mariam Ezzat',
+    email: 'mariam.media@westmun.org',
+    customTitle: 'Lead Photographer',
+    password: '5829',
+    role: 'media_and_press',
+    accessKey: '5829',
+    assignedGate: 'Assembly Hall Camera Deck',
+    ticketId: 'MUN-MED-06',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-med-youssef',
+    name: 'Youssef Gamal',
+    email: 'youssef.media@westmun.org',
+    customTitle: 'Videographer & Editor',
+    password: '6930',
+    role: 'media_and_press',
+    accessKey: '6930',
+    assignedGate: 'Media Gallery',
+    ticketId: 'MUN-MED-07',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: true,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+
+  // Volunteers Team Members (under Saad Usman, Maram Ali, Younis)
+  {
+    id: 'staff-vol-khaled',
+    name: 'Khaled Nabil',
+    email: 'khaled.vol@westmun.org',
+    customTitle: 'Assembly Hall Floor Runner',
+    password: '7041',
+    role: 'volunteers',
+    accessKey: '7041',
+    assignedGate: 'Grand Assembly Hall',
+    ticketId: 'MUN-VOL-05',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
+  {
+    id: 'staff-vol-yasmin',
+    name: 'Yasmin Adel',
+    email: 'yasmin.vol@westmun.org',
+    customTitle: 'VIP Escort Volunteer',
+    password: '8152',
+    role: 'volunteers',
+    accessKey: '8152',
+    assignedGate: 'Floor Operations',
+    ticketId: 'MUN-VOL-06',
+    canScan: false,
+    canManualCheckIn: false,
+    canRevokeCheckIn: false,
+    canManageStaff: false,
+    canExportData: false,
+    isActive: true,
+    lastActiveTime: new Date().toISOString(),
+  },
 ];
 
 // All official credential passes for WESTMUN.
@@ -1075,6 +1370,345 @@ const INITIAL_GUESTS: Guest[] = [
     status: 'Pending',
     scanCount: 0,
   },
+
+  // Ceremonies Team Guests
+  {
+    id: 'g-cer-reem',
+    name: 'Reem Al Shammari',
+    ticketId: 'MUN-CER-03',
+    category: 'Staff',
+    role: 'Ceremonies Stage Coordinator',
+    tableOrSeat: 'Ceremonies Stage',
+    notes: 'Ceremonies Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-cer-talia',
+    name: 'Talia Nasser',
+    ticketId: 'MUN-CER-04',
+    category: 'Staff',
+    role: 'Protocol & Awards Assistant',
+    tableOrSeat: 'VIP Holding Lounge',
+    notes: 'Ceremonies Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // DCC Team Guests
+  {
+    id: 'g-dcc-ryan',
+    name: 'Ryan Haddad',
+    ticketId: 'MUN-DCC-03',
+    category: 'Staff',
+    role: 'Resolution Formatting Specialist',
+    tableOrSeat: 'DCC Control Room',
+    notes: 'Digital Committee Control (DCC) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-dcc-salma',
+    name: 'Salma Fathy',
+    ticketId: 'MUN-DCC-04',
+    category: 'Staff',
+    role: 'Digital Display Coordinator',
+    tableOrSeat: 'Assembly Hall Tech Booth',
+    notes: 'Digital Committee Control (DCC) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Logistics Team Guests
+  {
+    id: 'g-log-kareem',
+    name: 'Kareem Tarek',
+    ticketId: 'MUN-LOG-02',
+    category: 'Staff',
+    role: 'Logistics Coordinator',
+    tableOrSeat: 'Central Storage',
+    notes: 'Logistics Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-log-zaid',
+    name: 'Zaid Mansoor',
+    ticketId: 'MUN-LOG-03',
+    category: 'Staff',
+    role: 'Venue Setup Specialist',
+    tableOrSeat: 'Main Hall Dispatch',
+    notes: 'Logistics Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // PR Team Guests
+  {
+    id: 'g-pr-farida',
+    name: 'Farida Hany',
+    ticketId: 'MUN-PR-02',
+    category: 'Staff',
+    role: 'VIP Relations Officer',
+    tableOrSeat: 'VIP Relations Suite',
+    notes: 'Public Relations (PR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-pr-omar',
+    name: 'Omar Khaled',
+    ticketId: 'MUN-PR-03',
+    category: 'Staff',
+    role: 'Press Liaison',
+    tableOrSeat: 'Diplomatic Entrance',
+    notes: 'Public Relations (PR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // HR Team Guests
+  {
+    id: 'g-hr-leen',
+    name: 'Leen Badr',
+    ticketId: 'MUN-HR-03',
+    category: 'Staff',
+    role: 'Staff Welfare Coordinator',
+    tableOrSeat: 'HR Operations Office',
+    notes: 'Human Resources (HR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-hr-tarek',
+    name: 'Tarek Zaki',
+    ticketId: 'MUN-HR-04',
+    category: 'Staff',
+    role: 'Roster & Attendance Officer',
+    tableOrSeat: 'Staff Check-in Hub',
+    notes: 'Human Resources (HR) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Media & Press Team Guests
+  {
+    id: 'g-med-mariam',
+    name: 'Mariam Ezzat',
+    ticketId: 'MUN-MED-06',
+    category: 'Press',
+    role: 'Lead Photographer',
+    tableOrSeat: 'Assembly Hall Camera Deck',
+    notes: 'Media & Press Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-med-youssef',
+    name: 'Youssef Gamal',
+    ticketId: 'MUN-MED-07',
+    category: 'Press',
+    role: 'Videographer & Editor',
+    tableOrSeat: 'Media Gallery',
+    notes: 'Media & Press Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+
+  // Volunteers Team Guests
+  {
+    id: 'g-vol-khaled',
+    name: 'Khaled Nabil',
+    ticketId: 'MUN-VOL-05',
+    category: 'Staff',
+    role: 'Assembly Hall Floor Runner',
+    tableOrSeat: 'Grand Assembly Hall',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+  {
+    id: 'g-vol-yasmin',
+    name: 'Yasmin Adel',
+    ticketId: 'MUN-VOL-06',
+    category: 'Staff',
+    role: 'VIP Escort Volunteer',
+    tableOrSeat: 'Floor Operations',
+    notes: 'Volunteers (Vols) Department',
+    status: 'Pending',
+    scanCount: 0,
+  },
+];
+
+const INITIAL_TASKS: TeamTask[] = [
+  // Media & Press (Assigned by Fahad Alkendi & Dana Al Najjar)
+  {
+    id: 'task-med-01',
+    title: 'Capture High-Res Keynote & Flag Ceremony Photos',
+    description: 'Provide real-time photo coverage of opening plenary speeches, guest ambassadors, and stage moments.',
+    department: 'media_and_press',
+    assignerId: 'staff-med-fahad',
+    assignerName: 'Fahad Alkendi',
+    assignerRole: 'Head of Media & Press',
+    assigneeIds: ['staff-med-mariam', 'staff-med-youssef'],
+    assigneeNames: ['Mariam Ezzat', 'Youssef Gamal'],
+    dueDate: '2026-10-21',
+    priority: 'urgent',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+  },
+  {
+    id: 'task-med-02',
+    title: 'Coordinate Press Room Interview Briefing',
+    description: 'Prepare press pass guidelines, schedule ambassador interviews, and publish morning digest.',
+    department: 'media_and_press',
+    assignerId: 'staff-med-dana',
+    assignerName: 'Dana Al Najjar',
+    assignerRole: 'Head of Female Press',
+    assigneeIds: ['staff-med-mariam'],
+    assigneeNames: ['Mariam Ezzat'],
+    dueDate: '2026-10-21',
+    priority: 'high',
+    status: 'completed',
+    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+    completedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    completedBy: {
+      id: 'staff-med-mariam',
+      name: 'Mariam Ezzat',
+    },
+  },
+  // Ceremonies (Assigned by Sultana Al Faraj)
+  {
+    id: 'task-cer-01',
+    title: 'Finalize Stage Protocol & Dignitary Front-Row Seating',
+    description: 'Audit VIP badges, nametags, stage podium microphones, and diplomatic escort protocol.',
+    department: 'ceremonies',
+    assignerId: 'staff-cer-sultana',
+    assignerName: 'Sultana Al Faraj',
+    assignerRole: 'Head of Ceremonies',
+    assigneeIds: ['staff-cer-reem', 'staff-cer-talia'],
+    assigneeNames: ['Reem Al Shammari', 'Talia Nasser'],
+    dueDate: '2026-10-21',
+    priority: 'urgent',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+  },
+  {
+    id: 'task-cer-02',
+    title: 'Soundcheck National Anthem & AV Backstage Cues',
+    description: 'Coordinate with AV lighting techs for national anthem track and dignitary entrance fanfare.',
+    department: 'ceremonies',
+    assignerId: 'staff-cer-sultana',
+    assignerName: 'Sultana Al Faraj',
+    assignerRole: 'Head of Ceremonies',
+    assigneeIds: ['staff-cer-reem'],
+    assigneeNames: ['Reem Al Shammari'],
+    dueDate: '2026-10-20',
+    priority: 'high',
+    status: 'completed',
+    createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+    completedAt: new Date(Date.now() - 3600000 * 1).toISOString(),
+    completedBy: {
+      id: 'staff-cer-reem',
+      name: 'Reem Al Shammari',
+    },
+  },
+  // Design (Assigned by Mallak Abbas)
+  {
+    id: 'task-des-01',
+    title: 'Export LED Stage Wall Graphics & Lower Thirds',
+    description: 'Render ultra high-res backdrop graphics for opening ceremony projector arrays.',
+    department: 'designers',
+    assignerId: 'staff-des-mallak',
+    assignerName: 'Mallak Abbas',
+    assignerRole: 'Head of Design',
+    assigneeIds: ['staff-des-layan', 'staff-des-aya'],
+    assigneeNames: ['Layan', 'Aya'],
+    dueDate: '2026-10-21',
+    priority: 'urgent',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+  },
+  // Marketing (Assigned by Naya)
+  {
+    id: 'task-mkt-01',
+    title: 'Launch Delegate Arrival Reels & Live Social Highlights',
+    description: 'Film delegate red carpet arrivals, capture short interviews, and publish to social channels.',
+    department: 'marketing',
+    assignerId: 'staff-mkt-naya',
+    assignerName: 'Naya',
+    assignerRole: 'Head of Marketing',
+    assigneeIds: ['staff-mkt-sama', 'staff-mkt-jayda'],
+    assigneeNames: ['Sama Sameh', 'Jayda'],
+    dueDate: '2026-10-21',
+    priority: 'normal',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  // DCC (Assigned by Majd & Lily Rabia)
+  {
+    id: 'task-dcc-01',
+    title: 'Setup Digital Resolution Voting Projectors',
+    description: 'Connect committee room voting screens, test digital voting dispatcher, and verify display feed.',
+    department: 'dcc',
+    assignerId: 'staff-dcc-lily',
+    assignerName: 'Lily Rabia',
+    assignerRole: 'Co-Head of DCC',
+    assigneeIds: ['staff-dcc-ryan', 'staff-dcc-salma'],
+    assigneeNames: ['Ryan', 'Salma'],
+    dueDate: '2026-10-21',
+    priority: 'high',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+  },
+  // Logistics (Assigned by Ahmed El Amir)
+  {
+    id: 'task-log-01',
+    title: 'Coordinate Delegate Lunch & Water Distribution',
+    description: 'Supervise refreshment catering setup in West Corridor and ensure delegate supplies are stocked.',
+    department: 'logistics',
+    assignerId: 'staff-log-ahmed',
+    assignerName: 'Ahmed El Amir',
+    assignerRole: 'Head of Logistics',
+    assigneeIds: ['staff-log-kareem', 'staff-log-zaid'],
+    assigneeNames: ['Kareem Tarek', 'Zaid Mansoor'],
+    dueDate: '2026-10-21',
+    priority: 'normal',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+  },
+  // Volunteers (Assigned by Saad Usman)
+  {
+    id: 'task-vol-01',
+    title: 'Distribute Committee Folders & Placards',
+    description: 'Place country placards, writing pads, and voting cards at every delegate seat in Hall A.',
+    department: 'volunteers',
+    assignerId: 'staff-vol-saad',
+    assignerName: 'Saad Usman',
+    assignerRole: 'Head of Volunteers',
+    assigneeIds: ['staff-vol-khaled', 'staff-vol-yasmin'],
+    assigneeNames: ['Khaled Nabil', 'Yasmin Adel'],
+    dueDate: '2026-10-21',
+    priority: 'urgent',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  // IT Systems (Assigned by Ahmed Magdi)
+  {
+    id: 'task-it-01',
+    title: 'Audit Scanner Wi-Fi Connectivity & Backup Batteries',
+    description: 'Perform ping test on all gate scanner tablets and ensure power banks are distributed to checkpoints.',
+    department: 'it',
+    assignerId: 'staff-it-ahmed',
+    assignerName: 'Ahmed Magdi',
+    assignerRole: 'Admin of IT',
+    assigneeIds: ['staff-it-saleh'],
+    assigneeNames: ['Saleh Samaha'],
+    dueDate: '2026-10-21',
+    priority: 'urgent',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+  },
 ];
 
 const VenueContext = createContext<VenueContextType | null>(null);
@@ -1151,6 +1785,14 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             scanCount: 0,
           });
         }
+
+        // Ensure all department team members from INITIAL_GUESTS are present
+        INITIAL_GUESTS.forEach((initialGuest) => {
+          if (!seen.has(initialGuest.id)) {
+            list.push(initialGuest);
+            seen.add(initialGuest.id);
+          }
+        });
 
         return list;
       }
@@ -1359,6 +2001,14 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
         }
 
+        // Ensure all department team members from INITIAL_STAFF are present
+        INITIAL_STAFF.forEach((initialStaff) => {
+          if (!seen.has(initialStaff.id)) {
+            list.push(initialStaff);
+            seen.add(initialStaff.id);
+          }
+        });
+
         return list;
       }
     } catch (e) {
@@ -1418,6 +2068,30 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
   const [activeTab, setActiveTab] = useState<'scanner' | 'dashboard' | 'guestlist' | 'team'>('scanner');
 
+  // Tasks state initialized from localStorage or INITIAL_TASKS
+  const [tasks, setTasks] = useState<TeamTask[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_TASKS);
+      if (saved) {
+        const parsed: TeamTask[] = JSON.parse(saved);
+        const seen = new Set(parsed.map((t) => t.id));
+        INITIAL_TASKS.forEach((initTask) => {
+          if (!seen.has(initTask.id)) {
+            parsed.push(initTask);
+            seen.add(initTask.id);
+          }
+        });
+        return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return INITIAL_TASKS;
+  });
+
+  // Active instant notification card for task completion
+  const [activeNotification, setActiveNotification] = useState<TaskCompletionNotificationEvent | null>(null);
+
   // Persistence
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_GUESTS, JSON.stringify(guests));
@@ -1436,6 +2110,10 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [logs]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
     if (currentUser) {
       localStorage.setItem(STORAGE_KEY_AUTH, currentUser.id);
     } else {
@@ -1443,24 +2121,67 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentUser]);
 
-  // Sync across tabs
+  // Sync across tabs and handle task completion broadcast events
   useEffect(() => {
-    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
-    const channel = new BroadcastChannel('mun_venue_sync');
+    if (typeof window === 'undefined') return;
 
-    channel.onmessage = (event) => {
-      const data = event.data;
-      if (!data) return;
-      if (data.type === 'SYNC_ALL') {
-        if (data.guests) setGuests(data.guests);
-        if (data.logs) setLogs(data.logs);
+    // 1. BroadcastChannel sync
+    let channel: BroadcastChannel | null = null;
+    if ('BroadcastChannel' in window) {
+      channel = new BroadcastChannel('mun_venue_sync');
+      channel.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        if (data.type === 'SYNC_ALL') {
+          if (data.guests) setGuests(data.guests);
+          if (data.logs) setLogs(data.logs);
+        }
+        if (data.type === 'SYNC_TASKS' && data.tasks) {
+          setTasks(data.tasks);
+        }
+        if (data.type === 'TASK_COMPLETED_EVENT' && data.notification) {
+          const notif: TaskCompletionNotificationEvent = data.notification;
+          // STRICT PERMISSION: Only the Head/Co-Head who assigned this task receives notification and buzz
+          if (currentUser && currentUser.id === notif.assignerId) {
+            setActiveNotification(notif);
+            vibrateTaskCompletion();
+            playTaskCompletionChime();
+          }
+        }
+      };
+    }
+
+    // 2. Window storage event listener (cross-window fallback)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY_TASKS && e.newValue) {
+        try {
+          setTasks(JSON.parse(e.newValue));
+        } catch {
+          // ignore
+        }
+      }
+      if (e.key === STORAGE_KEY_TASK_EVENT && e.newValue) {
+        try {
+          const notif: TaskCompletionNotificationEvent = JSON.parse(e.newValue);
+          // STRICT PERMISSION: Only the Head/Co-Head who assigned this task receives notification and buzz
+          if (currentUser && currentUser.id === notif.assignerId) {
+            setActiveNotification(notif);
+            vibrateTaskCompletion();
+            playTaskCompletionChime();
+          }
+        } catch {
+          // ignore
+        }
       }
     };
 
+    window.addEventListener('storage', handleStorage);
+
     return () => {
-      channel.close();
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [currentUser]);
 
   const broadcastUpdate = useCallback((updatedGuests: Guest[], updatedLogs: CheckInLogEntry[]) => {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -2476,6 +3197,50 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }, []);
 
+  const assignTeamMemberRole = useCallback(
+    (
+      memberId: string,
+      specificRole: string,
+      options?: { assignedGate?: string; notes?: string }
+    ): { success: boolean; error?: string } => {
+      const cleanRole = (specificRole || '').trim();
+      if (!cleanRole) {
+        return { success: false, error: 'Please enter a valid role title.' };
+      }
+
+      setStaffMembers((prev) =>
+        prev.map((s) => {
+          if (s.id === memberId) {
+            return {
+              ...s,
+              customTitle: cleanRole,
+              ...(options?.assignedGate ? { assignedGate: options.assignedGate.trim() } : {}),
+            };
+          }
+          return s;
+        })
+      );
+
+      // Synchronize guest record for badges and manifests
+      setGuests((prev) =>
+        prev.map((g) => {
+          if (g.id === `g-staff-${memberId}` || g.ticketId === memberId) {
+            return {
+              ...g,
+              role: cleanRole,
+              notes: options?.notes ? `${cleanRole} • ${options.notes}` : `${cleanRole} Credential Pass`,
+              ...(options?.assignedGate ? { tableOrSeat: options.assignedGate.trim() } : {}),
+            };
+          }
+          return g;
+        })
+      );
+
+      return { success: true };
+    },
+    []
+  );
+
   const removeStaffMember = useCallback((id: string) => {
     setStaffMembers((prev) => prev.filter((s) => s.id !== id));
     setGuests((prev) => prev.filter((g) => g.id !== `g-staff-${id}`));
@@ -2487,6 +3252,148 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearLastScanResult = useCallback(() => {
     setLastScanResult(null);
+  }, []);
+
+  const createTask = useCallback((taskData: Omit<TeamTask, 'id' | 'status' | 'createdAt'>): TeamTask => {
+    const newTask: TeamTask = {
+      ...taskData,
+      id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    setTasks((prev) => {
+      const updated = [newTask, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('mun_venue_sync');
+          ch.postMessage({ type: 'SYNC_TASKS', tasks: updated });
+          ch.close();
+        }
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+
+    return newTask;
+  }, []);
+
+  const completeTask = useCallback(
+    (
+      taskId: string,
+      completedByMember?: { id: string; name: string }
+    ): { success: boolean; task?: TeamTask; error?: string } => {
+      let completedItem: TeamTask | undefined;
+      let alreadyCompleted = false;
+
+      setTasks((prev) => {
+        const updated = prev.map((t) => {
+          if (t.id === taskId) {
+            if (t.status === 'completed') {
+              alreadyCompleted = true;
+              completedItem = t;
+              return t;
+            }
+            const completer = completedByMember || {
+              id: currentUser?.id || 'staff-member',
+              name: currentUser?.name || 'Staff Member',
+            };
+            completedItem = {
+              ...t,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              completedBy: completer,
+            };
+            return completedItem;
+          }
+          return t;
+        });
+
+        if (!alreadyCompleted && completedItem) {
+          try {
+            localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+              const ch = new BroadcastChannel('mun_venue_sync');
+              ch.postMessage({ type: 'SYNC_TASKS', tasks: updated });
+              ch.close();
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        return updated;
+      });
+
+      if (alreadyCompleted) {
+        return { success: false, error: 'Task has already been completed.', task: completedItem };
+      }
+
+      if (!completedItem) {
+        return { success: false, error: 'Task not found.' };
+      }
+
+      // Build notification event
+      const notifEvent: TaskCompletionNotificationEvent = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        taskId: completedItem.id,
+        taskTitle: completedItem.title,
+        completedByName: completedItem.completedBy?.name || 'Team Member',
+        completedById: completedItem.completedBy?.id || '',
+        assignerId: completedItem.assignerId,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Broadcast across tabs
+      try {
+        localStorage.setItem(STORAGE_KEY_TASK_EVENT, JSON.stringify(notifEvent));
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('mun_venue_sync');
+          ch.postMessage({ type: 'TASK_COMPLETED_EVENT', notification: notifEvent });
+          ch.close();
+        }
+      } catch {
+        // ignore
+      }
+
+      // Trigger notification, sound, and vibration ONLY IF the current logged in user is the Assigner
+      if (currentUser && currentUser.id === completedItem.assignerId) {
+        setActiveNotification(notifEvent);
+        vibrateTaskCompletion();
+        playTaskCompletionChime();
+      }
+
+      return { success: true, task: completedItem };
+    },
+    [currentUser]
+  );
+
+  const deleteTask = useCallback((taskId: string) => {
+    setTasks((prev) => {
+      const updated = prev.filter((t) => t.id !== taskId);
+      try {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('mun_venue_sync');
+          ch.postMessage({ type: 'SYNC_TASKS', tasks: updated });
+          ch.close();
+        }
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  }, []);
+
+  const dismissNotification = useCallback((id?: string) => {
+    setActiveNotification((cur) => {
+      if (!id || cur?.id === id) {
+        return null;
+      }
+      return cur;
+    });
   }, []);
 
   const stats = useMemo(() => {
@@ -2550,9 +3457,16 @@ export const VenueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loadSampleData,
         addStaffMember,
         updateStaffMember,
+        assignTeamMemberRole,
         removeStaffMember,
         updateSettings,
         clearLastScanResult,
+        tasks,
+        createTask,
+        completeTask,
+        deleteTask,
+        activeNotification,
+        dismissNotification,
         stats,
       }}
     >

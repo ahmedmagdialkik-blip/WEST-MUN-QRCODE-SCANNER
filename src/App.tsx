@@ -23,6 +23,9 @@ import { UnderSecretaryWelcomeEasterEgg } from './components/EasterEgg/UnderSecr
 import { DanaNameChangeEasterEgg } from './components/EasterEgg/DanaNameChangeEasterEgg';
 import { getAccountEasterEgg, isDanaAlNajjar } from './utils/easterEggAuth';
 import { isScannerOrAdminRole, ROLE_LABELS, StaffMember } from './types/venue';
+import { isHeadOrCoHead } from './utils/teamHierarchy';
+import { DepartmentTeamView } from './components/Admin/DepartmentTeamView';
+import { TaskCompletionToast } from './components/Notifications/TaskCompletionToast';
 
 type AppFlowStage =
   | 'intro'
@@ -36,6 +39,7 @@ type AppFlowStage =
 function MainVenueContent() {
   const {
     activeTab,
+    setActiveTab,
     isAuthenticated,
     currentUser,
     lastScanResult,
@@ -178,6 +182,7 @@ function MainVenueContent() {
 
   // 4. Stage: Homepage (Executive Portal)
   const isAuthorizedScanner = currentUser ? isScannerOrAdminRole(currentUser.role) : false;
+  const isLeader = currentUser ? isHeadOrCoHead(currentUser) : false;
 
   return (
     <div
@@ -200,10 +205,7 @@ function MainVenueContent() {
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-4xl mx-auto p-3 sm:p-5 overflow-x-hidden">
-        {!isAuthorizedScanner ? (
-          /* Locked to Staff Pass Screen for non-security/admin roles */
-          <StaffPassScreen />
-        ) : (
+        {isAuthorizedScanner ? (
           /* Authorized Security Officers & Admins: Full Scanner & Console Access */
           <>
             {activeTab === 'scanner' && <ScannerView />}
@@ -211,6 +213,23 @@ function MainVenueContent() {
             {activeTab === 'guestlist' && <GuestListView />}
             {activeTab === 'team' && <TeamManagementView />}
           </>
+        ) : isLeader ? (
+          /* Department Heads & Co-Heads: Seamless access to their Pass, Team & Roles, and Delegates */
+          <>
+            {activeTab === 'team' && (
+              <DepartmentTeamView
+                onBackToPass={() => setActiveTab('scanner')}
+                showBackToPassButton={true}
+              />
+            )}
+            {activeTab === 'guestlist' && <GuestListView />}
+            {activeTab !== 'team' && activeTab !== 'guestlist' && (
+              <StaffPassScreen initialTab="pass" />
+            )}
+          </>
+        ) : (
+          /* Standard Delegates & Non-Leadership Staff Pass */
+          <StaffPassScreen initialTab="pass" />
         )}
       </main>
 
@@ -228,8 +247,8 @@ function MainVenueContent() {
         </span>
       </footer>
 
-      {/* Bottom Sticky Navigation: Strictly restricted to Security and Admins */}
-      {isAuthorizedScanner && <BottomNav />}
+      {/* Bottom Sticky Navigation: Shown to Security, Admins, and Department Heads/Co-Heads */}
+      {(isAuthorizedScanner || isLeader) && <BottomNav />}
 
       {/* Full-Screen Scan Result Audio & Visual Feedback Overlay */}
       {lastScanResult && (
@@ -247,6 +266,9 @@ function MainVenueContent() {
 
       {/* Account Authentication Switcher Modal */}
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
+
+      {/* Instant Task Completion Notification Toast for Heads & Co-Heads */}
+      <TaskCompletionToast />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 import { playClickSound } from '../utils/audio';
+import { isHeadOrCoHead } from '../utils/teamHierarchy';
 import officialLogoUrl from '../assets/images/west_mun_logo_official.jpg';
 
 interface HeaderProps {
@@ -46,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isAuthorizedScanner = isScannerOrAdminRole(currentUser?.role);
+  const isLeader = isHeadOrCoHead(currentUser);
 
   const toggleSound = () => {
     playClickSound();
@@ -96,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
                   WEST MUN
                 </span>
                 <span className="hidden xs:inline-block text-[9px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-none bg-[#241b14] text-[#B08D57] border border-[#B08D57]/30 font-serif">
-                  {isAuthorizedScanner ? 'EXECUTIVE' : 'DELEGATE'}
+                  {isAuthorizedScanner ? 'EXECUTIVE' : isLeader ? 'LEADERSHIP' : 'DELEGATE'}
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-neutral-400 truncate flex items-center gap-1.5 font-serif">
@@ -110,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Center & Right Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Desktop Navigation Links */}
-            {isAuthorizedScanner && (
+            {isAuthorizedScanner ? (
               <nav className="hidden md:flex items-center gap-1 mr-1">
                 <button
                   onClick={() => handleNavClick('scanner')}
@@ -157,7 +159,43 @@ export const Header: React.FC<HeaderProps> = ({
                   Credentials & Team
                 </button>
               </nav>
-            )}
+            ) : isLeader ? (
+              <nav className="hidden md:flex items-center gap-1 mr-1">
+                <button
+                  onClick={() => handleNavClick('scanner')}
+                  className={`px-2.5 py-1 text-xs font-serif uppercase tracking-wider rounded-none transition border ${
+                    activeTab !== 'team' && activeTab !== 'guestlist'
+                      ? 'bg-[#221b16] text-[#B08D57] border-[#B08D57]/60 font-bold'
+                      : 'text-neutral-400 hover:text-[#F5F2EA] border-transparent'
+                  }`}
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  My Pass
+                </button>
+                <button
+                  onClick={() => handleNavClick('team')}
+                  className={`px-2.5 py-1 text-xs font-serif uppercase tracking-wider rounded-none transition border ${
+                    activeTab === 'team'
+                      ? 'bg-[#221b16] text-[#c99b58] border-[#c99b58]/60 font-bold'
+                      : 'text-neutral-400 hover:text-[#F5F2EA] border-transparent'
+                  }`}
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  My Team & Roles
+                </button>
+                <button
+                  onClick={() => handleNavClick('guestlist')}
+                  className={`px-2.5 py-1 text-xs font-serif uppercase tracking-wider rounded-none transition border ${
+                    activeTab === 'guestlist'
+                      ? 'bg-[#221b16] text-[#B08D57] border-[#B08D57]/60 font-bold'
+                      : 'text-neutral-400 hover:text-[#F5F2EA] border-transparent'
+                  }`}
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  Delegates
+                </button>
+              </nav>
+            ) : null}
 
             {/* Capacity Counter */}
             {isAuthorizedScanner && (
@@ -227,6 +265,20 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
 
                       <div className="space-y-1.5">
+                        {isLeader && (
+                          <button
+                            onClick={() => {
+                              playClickSound();
+                              setShowUserDropdown(false);
+                              handleNavClick('team');
+                            }}
+                            className="w-full py-1.5 px-2.5 rounded-none bg-[#241c16] hover:bg-[#34271f] border border-[#B08D57] text-[#D4AF37] text-xs font-serif tracking-wider flex items-center gap-2 transition cursor-pointer font-bold shadow-xs"
+                          >
+                            <Crown className="w-3.5 h-3.5 text-[#B08D57]" />
+                            <span>My Team & Roles</span>
+                          </button>
+                        )}
+
                         {onReplayIntro && (
                           <button
                             onClick={() => {
@@ -366,6 +418,53 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <ShieldAlert className="w-4 h-4 text-[#c99b58]" />
                     <span>Credentials & Team</span>
+                  </button>
+                </div>
+              )}
+
+              {!isAuthorizedScanner && isLeader && (
+                <div className="space-y-1">
+                  <div
+                    className="text-[10px] uppercase tracking-[0.2em] text-[#B08D57]/70 font-serif mb-2"
+                    style={{ fontFamily: "'Cinzel', serif" }}
+                  >
+                    Leadership Console
+                  </div>
+
+                  <button
+                    onClick={() => handleNavClick('scanner')}
+                    className={`w-full py-2.5 px-3 flex items-center gap-3 text-xs font-serif tracking-wider uppercase transition border ${
+                      activeTab !== 'team' && activeTab !== 'guestlist'
+                        ? 'bg-[#251d18] text-[#B08D57] border-[#B08D57]/60 font-bold'
+                        : 'bg-[#181310] text-neutral-300 border-transparent hover:border-[#B08D57]/30'
+                    }`}
+                  >
+                    <Shield className="w-4 h-4 text-[#B08D57]" />
+                    <span>My Diplomatic Pass</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick('team')}
+                    className={`w-full py-2.5 px-3 flex items-center gap-3 text-xs font-serif tracking-wider uppercase transition border ${
+                      activeTab === 'team'
+                        ? 'bg-[#251d18] text-[#e5c578] border-[#c99b58]/60 font-bold'
+                        : 'bg-[#181310] text-neutral-300 border-transparent hover:border-[#a87944]/30'
+                    }`}
+                  >
+                    <Crown className="w-4 h-4 text-[#c99b58]" />
+                    <span>My Team & Role Assignment</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick('guestlist')}
+                    className={`w-full py-2.5 px-3 flex items-center gap-3 text-xs font-serif tracking-wider uppercase transition border ${
+                      activeTab === 'guestlist'
+                        ? 'bg-[#251d18] text-[#B08D57] border-[#B08D57]/60 font-bold'
+                        : 'bg-[#181310] text-neutral-300 border-transparent hover:border-[#B08D57]/30'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 text-[#B08D57]" />
+                    <span>Guest Manifest</span>
                   </button>
                 </div>
               )}
